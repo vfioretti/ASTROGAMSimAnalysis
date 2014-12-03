@@ -7,19 +7,10 @@
 ; ---------------------------------------------------------------------------------
 ; Output:
 ; - all files are created in a self-descripted subdirectory of the current directory. If the directory is not present it is created by the IDL script.
-; ---------> ASCII files
-; - G4_GAMS_XPLANE_ASTROGAM<version>_<phys>List_<sim_type>_<strip>_<point>_<n_in>ph_<energy>MeV_<theta>_<phi>.<file>.dat
-; - G4_GAMS_YPLANE_ASTROGAM<version>_<phys>List_<sim_type>_<strip>_<point>_<n_in>ph_<energy>MeV_<theta>_<phi>.<file>.dat
-; - G4_GAMS_AC_ASTROGAM<version>_<phys>List_<sim_type>_<strip>_<point>_<n_in>ph_<energy>MeV_<theta>_<phi>.<file>.dat
-; - G4_GAMS_CAL_ASTROGAM<version>_<phys>List_<sim_type>_<strip>_<point>_<n_in>ph_<energy>MeV_<theta>_<phi>.<file>.dat
-; - G4.DIGI.GENERAL.AGILE<version>.<phys>List.<sim_type>.<strip>.<point>.<n_in>ph.<energy>MeV.<theta>.<phi>.<file>.dat
-; - G4.DIGI.KALMAN.AGILE<version>.<phys>List.<sim_type>.<strip>.<point>.<n_in>ph.<energy>MeV.<theta>.<phi>.<file>.dat
-; - G4.RAW.GENERAL.AGILE<version>.<phys>List.<sim_type>.<strip>.<point>.<n_in>ph.<energy>MeV.<theta>.<phi>.<file>.dat
-; - G4.RAW.KALMAN.AGILE<version>.<phys>List.<sim_type>.<strip>.<point>.<n_in>ph.<energy>MeV.<theta>.<phi>.<file>.dat
 ; ---------> FITS files
 ; - G4.RAW.ASTROGAM<version>.<phys>List.<sim_type>.<strip>.<point>.<n_in>ph.<energy>MeV.<theta>.<phi>.<file>.fits
-; - L0.ASTROGAM<version>.<phys>List.<sim_type>.<strip>.<point>.<n_in>ph.<energy>MeV.<theta>.<phi>.<file>.fits
-; - L0.5.DIGI.ASTROGAM<version>.<phys>List.<sim_type>.<strip>.<point>.<n_in>ph.<energy>MeV.<theta>.<phi>.<file>.fits
+; - L0.5.ASTROGAM<version>.<phys>List.<sim_type>.<strip>.<point>.<n_in>ph.<energy>MeV.<theta>.<phi>.<file>.fits
+; - KALMAN.ASTROGAM<version>.<phys>List.<sim_type>.<strip>.<point>.<n_in>ph.<energy>MeV.<theta>.<phi>.<file>.fits
 ; - G4.AC.ASTROGAM<version>.<phys>List.<sim_type>.<strip>.<point>.<n_in>ph.<energy>MeV.<theta>.<phi>.<file>.fits
 ; - G4.CAL.ASTROGAM<version>.<phys>List.<sim_type>.<strip>.<point>.<n_in>ph.<energy>MeV.<theta>.<phi>.<file>.fits 
 ; ----------------------------------------------------------------------------------
@@ -44,7 +35,7 @@ astrogam_version = ''
 sim_type = 0
 py_list = 0
 ene_range = 0
-ene_type = 0
+ene_type = 0.
 ene_min = 0
 ene_max = 0
 theta_type = 0
@@ -61,7 +52,8 @@ read, n_fits, PROMPT='% - Enter number of FITS files:'
 read, ene_range, PROMPT='% - Enter energy distribution [0 = mono, 1 = range]:'
 if (ene_range EQ 0) then begin
   read, ene_type, PROMPT='% - Enter energy [MeV]:'
-  ene_type = strtrim(string(ene_type),1)
+  if (ene_type GE 1) then ene_type = strtrim(string(long(ene_type)),1)
+  if (ene_type LT 1) then ene_type = STRMID(STRTRIM(STRING(ene_type),1),0,5)
 endif
 if (ene_range EQ 1) then begin
     read, ene_min, PROMPT='% - Enter miminum energy [MeV]:' 
@@ -151,6 +143,7 @@ if (astrogam_version EQ 'V1.0') then begin
     N_plane = N_tray*2
     N_layer = 2l
     N_strip = 2480l
+    tray_side = 60.016 ;cm
 
     bar_side = 0.5  ; cm  (side of calorimeter bars)
     n_bars = 120*120  ; number of calorimeter bars
@@ -159,7 +152,7 @@ if (astrogam_version EQ 'V1.0') then begin
     ; accoppiamento capacitivo
     ;acap = [0.035, 0.045, 0.095, 0.115, 0.38, 1., 0.38, 0.115, 0.095, 0.045, 0.035]  
     ; tracker energy threshold (0.25 MIP)
-    E_th = 52./4.   ; keV 
+    E_th = 20.  ; keV 
     
     E_th_cal = 40. ; keV
   
@@ -632,7 +625,7 @@ for ifile=0, n_fits-1 do begin
     
     print, '%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%'
     print, '                      Tracker   '
-    print, '      Build the Tracker readout and floating strip          '
+    print, '      Build the Tracker real height          '
     print, '%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%'
     
     
@@ -1502,26 +1495,64 @@ for ifile=0, n_fits-1 do begin
     
     
     MWRFITS, L05TRACKER, outdir+'/L0.5.ASTROGAM'+astrogam_version+'.'+py_name+'.'+sim_name+'.'+stripname+'.'+sname+'.'+STRMID(STRTRIM(STRING(N_IN),1),0,10)+'ph.'+ene_type+'MeV.'+STRMID(STRTRIM(STRING(THETA_TYPE),1),0,10)+'.'+STRMID(STRTRIM(STRING(PHI_TYPE),1),0,10)+'.'+strtrim(string(ifile),1)+'.fits', HDR_L05GLOBAL, /CREATE
+
     
     print, '%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%'
     print, '                      Summing all the volumes '
     print, '%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%'
 
+    
+    ; cluster X and Y arrays for the GAMS input
+   
+    check_N_trig = 0
+    max_arraydim_x = 0
+    max_arraydim_y = 0
+    
+    theta_kalman = fltarr(N_trig)
+    phi_kalman = fltarr(N_trig)
+    energy_kalman = fltarr(N_trig)
+    
+    default_max_cols = 1000
+    cluster_x_array = MAKE_ARRAY(default_max_cols, N_trig, /DOUBLE, VALUE = 0)
+    cluster_y_array = MAKE_ARRAY(default_max_cols, N_trig, /DOUBLE, VALUE = 0)
+    plane_x_array = MAKE_ARRAY(default_max_cols, N_trig, /INTEGER, VALUE = 0)
+    plane_y_array = MAKE_ARRAY(default_max_cols, N_trig, /INTEGER, VALUE = 0)
+    
+    
     Glob_event_id_sum = -1l
     Glob_Si_id_sum = -1l
     Glob_tray_id_sum= -1l
     Glob_plane_id_sum = -1l
     Glob_zpos_sum = -1.
     Glob_energy_dep_sum = -1.  
-     
+    
     j=0l
     while (1) do begin
+        
         where_event_eq = where(Glob_event_id_cluster EQ Glob_event_id_cluster(j))
+        ;print, 'where_event_eq', where_event_eq
+        
+        where_clusterx = where((Glob_Si_id_cluster(where_event_eq) EQ 2) or (Glob_Si_id_cluster(where_event_eq) EQ 0))
+        if (n_elements(where_clusterx) GT max_arraydim_x) then max_arraydim_x = n_elements(where_clusterx)
+        temp_planex = intarr(n_elements(where_clusterx))
+        temp_clusterx = dblarr(n_elements(where_clusterx))
+        
+        ;print, 'max_arraydim_x', max_arraydim_x
+        ;print, 'where_clusterx', where_clusterx
+        
+        where_clustery = where((Glob_Si_id_cluster(where_event_eq) EQ 3) or (Glob_Si_id_cluster(where_event_eq) EQ 1))
+        if (n_elements(where_clustery) GT max_arraydim_y) then max_arraydim_y = n_elements(where_clustery)
+        temp_planey = intarr(n_elements(where_clustery))
+        temp_clustery = dblarr(n_elements(where_clustery))
+
+        counterx = 0
+        countery = 0
         
         event_id_temp = Glob_event_id_cluster(where_event_eq)
         Si_id_temp = Glob_Si_id_cluster(where_event_eq) 
         tray_id_temp = Glob_tray_id_cluster(where_event_eq) 
         plane_id_temp = Glob_plane_id_cluster(where_event_eq) 
+        pos_temp = Glob_pos_cluster(where_event_eq) 
         zpos_temp = Glob_zpos_cluster(where_event_eq) 
         energy_dep_temp = Glob_energy_dep_cluster(where_event_eq) 
     
@@ -1533,38 +1564,127 @@ for ifile=0, n_fits-1 do begin
             tray_id_temp_tray = tray_id_temp(where_tray_eq)
             Si_id_temp_tray = Si_id_temp(where_tray_eq) 
             plane_id_temp_tray = plane_id_temp(where_tray_eq)
+            pos_temp_tray = pos_temp(where_tray_eq)
             zpos_temp_tray = zpos_temp(where_tray_eq)
             energy_dep_temp_tray = energy_dep_temp(where_tray_eq)     
 
             t=0
             while (1) do begin
-               
-                 where_si_eq = where(Si_id_temp_tray EQ Si_id_temp_tray(t))
-                                 
-                 Glob_event_id_sum = [Glob_event_id_sum, Glob_event_id_cluster(j)]                
-                 Glob_Si_id_sum = [Glob_Si_id_sum, Si_id_temp_tray(t)]
-                 Glob_tray_id_sum = [Glob_tray_id_sum, tray_id_temp(r)]
-                 Glob_plane_id_sum = [Glob_plane_id_sum, plane_id_temp(r)]
-                 Glob_zpos_sum = [Glob_zpos_sum, zpos_temp(r)]
-                 Glob_energy_dep_sum = [Glob_energy_dep_sum, total(energy_dep_temp_tray(where_si_eq))]
                  
-                 N_si_eq = n_elements(where_si_eq)
-                 if where_si_eq(N_si_eq-1) LT (n_elements(Si_id_temp_tray)-1) then begin
-                   t = where_si_eq(N_si_eq-1)+1
+                 where_plane_eq = where(plane_id_temp_tray EQ plane_id_temp_tray(t))
+                 event_id_temp_plane = event_id_temp_tray(where_plane_eq)
+                 tray_id_temp_plane = tray_id_temp_tray(where_plane_eq)
+                 Si_id_temp_plane = Si_id_temp_tray(where_plane_eq) 
+                 plane_id_temp_plane = plane_id_temp_tray(where_plane_eq)
+                 pos_temp_plane = pos_temp_tray(where_plane_eq)
+                 zpos_temp_plane = zpos_temp_tray(where_plane_eq)
+                 energy_dep_temp_plane = energy_dep_temp_tray(where_plane_eq)     
+                 
+                 
+                 last = 0
+                 while (1) do begin
+                     where_si_eq = where(Si_id_temp_plane EQ Si_id_temp_plane(last))
+                     
+                     temp_samesi = pos_temp_plane(where_si_eq)
+                     ; GAMS array 
+                     if ((Si_id_temp_plane(last) EQ 2) or (Si_id_temp_plane(last) EQ 0)) then begin
+                        for jel = 0l, n_elements(temp_samesi)-1 do begin
+                              temp_planex[jel + counterx] = plane_id_temp_tray(t)
+                              temp_clusterx[jel + counterx] = temp_samesi(jel) + (tray_side/2.)
+                        endfor
+                        counterx = counterx + n_elements(temp_samesi)
+                     endif
+                     if ((Si_id_temp_plane(last) EQ 3) or (Si_id_temp_plane(last) EQ 1)) then begin
+                        for jel = 0l, n_elements(temp_samesi)-1 do begin
+                              temp_planey[jel + countery] = plane_id_temp_tray(t)
+                              temp_clustery[jel + countery] = temp_samesi(jel) + (tray_side/2.)
+                        endfor
+                        countery = countery + n_elements(temp_samesi)
+                     endif
+                     
+                                     
+                     Glob_event_id_sum = [Glob_event_id_sum, Glob_event_id_cluster(j)]                
+                     Glob_Si_id_sum = [Glob_Si_id_sum, Si_id_temp_plane(last)]
+                     Glob_tray_id_sum = [Glob_tray_id_sum, tray_id_temp(r)]
+                     Glob_plane_id_sum = [Glob_plane_id_sum, plane_id_temp_tray(t)]
+                     Glob_zpos_sum = [Glob_zpos_sum, zpos_temp_plane(last)]
+                     Glob_energy_dep_sum = [Glob_energy_dep_sum, total(energy_dep_temp_plane(where_si_eq))]
+                     
+                     N_si_eq = n_elements(where_si_eq)
+                     if where_si_eq(N_si_eq-1) LT (n_elements(Si_id_temp_plane)-1) then begin
+                       last = where_si_eq(N_si_eq-1)+1
+                     endif else break
+                 endwhile
+                 
+                 N_plane_eq = n_elements(where_plane_eq)
+                 if where_plane_eq(N_plane_eq-1) LT (n_elements(plane_id_temp_tray)-1) then begin
+                   t = where_plane_eq(N_plane_eq-1)+1
                  endif else break
             endwhile
 
+            for jcol = 0, n_elements(temp_planex) -1 do begin 
+                plane_x_array[jcol, check_N_trig] = temp_planex[jcol]
+                cluster_x_array[jcol, check_N_trig] = temp_clusterx[jcol]
+            endfor
+            for jcol = 0, n_elements(temp_planey) -1 do begin 
+                plane_y_array[jcol, check_N_trig] = temp_planey[jcol]
+                cluster_y_array[jcol, check_N_trig] = temp_clustery[jcol]
+            endfor
+            
+            
             N_tray_eq = n_elements(where_tray_eq)
             if where_tray_eq(N_tray_eq-1) LT (n_elements(tray_id_temp)-1) then begin
               r = where_tray_eq(N_tray_eq-1)+1
             endif else break      
         endwhile
         
+        theta_kalman(check_N_trig) = theta_type
+        phi_kalman(check_N_trig) = phi_type
+        energy_kalman(check_N_trig) = ene_type
+        
+        check_N_trig = check_N_trig + 1
+        
         N_event_eq = n_elements(where_event_eq)
         if where_event_eq(N_event_eq-1) LT (n_elements(Glob_event_id_cluster)-1) then begin
           j = where_event_eq(N_event_eq-1)+1
         endif else break
     endwhile
+    
+    max_cols = 0
+    if (max_arraydim_x GT max_arraydim_y) then max_cols = max_arraydim_x
+    if (max_arraydim_y GT max_arraydim_x) then max_cols = max_arraydim_y
+
+    print, 'Max number of cols: ', max_cols
+
+;    keepcols = indgen(max_cols)    
+;    plane_x_array = plane_x_array[keepcols, *]
+;    cluster_x_array = cluster_x_array[keepcols, *]    
+;    plane_y_array = plane_y_array[keepcols, *]
+;    cluster_y_array = cluster_y_array[keepcols, *]
+    
+    string_dim = string(default_max_cols)    
+    CREATE_STRUCT, KALMANTRACKER, 'TRACKERKALMAN', ['Theta', 'Phi','Energia','Piani_X','Clusters_X', 'Piani_Y', 'Clusters_Y'], 'F,F,F,I('+string_dim+'),D('+string_dim+'),I('+string_dim+'),D('+string_dim+')', DIMEN = N_ELEMENTS(theta_kalman)
+
+    KALMANTRACKER.Theta = float(theta_kalman)
+    KALMANTRACKER.Phi = float(phi_kalman)
+    KALMANTRACKER.Energia = float(energy_kalman)
+    KALMANTRACKER.Piani_X = plane_x_array
+    KALMANTRACKER.Clusters_X = cluster_x_array
+    KALMANTRACKER.Piani_Y = plane_y_array
+    KALMANTRACKER.Clusters_Y = cluster_y_array
+   
+         
+    HDR_KALMAN = ['Creator          = Valentina Fioretti (INAF/IASF Bologna)', $
+              'THELSIM release  = ASTROGAM '+astrogam_version, $
+              'N_IN             = '+STRTRIM(STRING(N_IN),1)+'   /Number of simulated particles', $
+              'N_TRIG           = '+STRTRIM(STRING(N_TRIG),1)+'   /Number of triggering events', $
+              'ENERGY           = '+ene_type+'   /Simulated input energy', $
+              'THETA            = '+STRTRIM(STRING(THETA_TYPE),1)+'   /Simulated input theta angle', $
+              'PHI              = '+STRTRIM(STRING(PHI_TYPE),1)+'   /Simulated input phi angle']
+    
+    
+    MWRFITS, KALMANTRACKER, outdir+'/KALMAN.TRACKER.ASTROGAM'+astrogam_version+'.'+py_name+'.'+sim_name+'.'+stripname+'.'+sname+'.'+STRMID(STRTRIM(STRING(N_IN),1),0,10)+'ph.'+ene_type+'MeV.'+STRMID(STRTRIM(STRING(THETA_TYPE),1),0,10)+'.'+STRMID(STRTRIM(STRING(PHI_TYPE),1),0,10)+'.'+strtrim(string(ifile),1)+'.fits', HDR_KALMAN, /CREATE
+    
     
     Glob_event_id_sum = Glob_event_id_sum[1:*]
     Glob_Si_id_sum =  Glob_Si_id_sum[1:*]
@@ -1573,9 +1693,6 @@ for ifile=0, n_fits-1 do begin
     Glob_zpos_sum = Glob_zpos_sum[1:*]
     Glob_energy_dep_sum = Glob_energy_dep_sum[1:*]
     
-    print, n_elements(Glob_event_id_sum)
-    print, n_elements(Glob_Si_id_sum)
-    print, n_elements(Glob_tray_id_sum)
     
     CREATE_STRUCT, SUMTRACKER, 'TRACKERSUM', ['EVT_ID', 'TRAY_ID','PLANE_ID','TRK_FLAG','ZPOS','E_DEP'], 'J,I,I,I,F20.5,F20.5', DIMEN = N_ELEMENTS(Glob_event_id_sum)
     SUMTRACKER.EVT_ID = Glob_event_id_sum
