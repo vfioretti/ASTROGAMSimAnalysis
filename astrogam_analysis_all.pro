@@ -39,6 +39,7 @@ pro astrogam_analysis_all
 
 ; Variables initialization
 N_in = 0UL            ;--> Number of emitted photons
+part_type = ''       ; particle type
 n_files = 0           ;--> Number of processed files produced by agile_dhsim_file
 
 astrogam_version = ''
@@ -57,6 +58,7 @@ read, sim_type, PROMPT='% - Enter simulation type [0 = Mono, 1 = Chen, 2: Vela, 
 read, n_files, PROMPT='% - Enter number of input files:'
 read, py_list, PROMPT='% - Enter the Physics List [0 = QGSP_BERT_EMV, 100 = ARGO, 300 = FERMI, 400 = ASTROMEV]:'
 read, N_in, PROMPT='% - Enter the number of emitted photons:'
+read, part_type, PROMPT='% - Enter the particle type [ph = photons, mu = muons]:'
 read, ene_range, PROMPT='% - Enter energy distribution [0 = mono, 1 = range]:'
 if (ene_range EQ 0) then begin
   read, ene_type, PROMPT='% - Enter energy [MeV]:'
@@ -114,26 +116,46 @@ if (source_g EQ 1) then begin
  sname = 'Plane'
 endif
 
-read, isStrip, PROMPT='% - Strip activated?:'
-read, repli, PROMPT='% - Strips replicated?:'
+read, isStrip, PROMPT='% - Strip/Pixels activated?:'
+read, repli, PROMPT='% - Strips/Pixels replicated?:'
 
-if (isStrip EQ 0) then stripDir = 'NoStrip/'
-if ((isStrip EQ 1) AND (repli EQ 0)) then stripDir = 'StripNoRepli/'
-if ((isStrip EQ 1) AND (repli EQ 1)) then stripDir = 'StripRepli/'
-
-if (isStrip EQ 0) then stripname = 'NOSTRIP'
-if ((isStrip EQ 1) AND (repli EQ 0)) then stripname = 'STRIP'
-if ((isStrip EQ 1) AND (repli EQ 1)) then stripname = 'STRIP.REPLI'
+if (astrogam_version EQ 'V1.0') then begin
+    if (isStrip EQ 0) then stripDir = 'NoStrip/'
+    if ((isStrip EQ 1) AND (repli EQ 0)) then stripDir = 'StripNoRepli/'
+    if ((isStrip EQ 1) AND (repli EQ 1)) then stripDir = 'StripRepli/'
+    
+    if (isStrip EQ 0) then stripname = 'NOSTRIP'
+    if ((isStrip EQ 1) AND (repli EQ 0)) then stripname = 'STRIP'
+    if ((isStrip EQ 1) AND (repli EQ 1)) then stripname = 'STRIP.REPLI'
+endif 
+if (astrogam_version EQ 'V2.0') then begin
+    if (isStrip EQ 0) then stripDir = 'NoPixel/'
+    if ((isStrip EQ 1) AND (repli EQ 0)) then stripDir = 'PixelNoRepli/'
+    if ((isStrip EQ 1) AND (repli EQ 1)) then stripDir = 'PixelRepli/'
+    
+    if (isStrip EQ 0) then stripname = 'NOPIXEL'
+    if ((isStrip EQ 1) AND (repli EQ 0)) then stripname = 'PIXEL'
+    if ((isStrip EQ 1) AND (repli EQ 1)) then stripname = 'PIXEL.REPLI'
+endif 
+if (astrogam_version EQ 'V3.0') then begin
+    if (isStrip EQ 0) then stripDir = 'NoPixel/'
+    if ((isStrip EQ 1) AND (repli EQ 0)) then stripDir = 'PixelNoRepli/'
+    if ((isStrip EQ 1) AND (repli EQ 1)) then stripDir = 'PixelRepli/'
+    
+    if (isStrip EQ 0) then stripname = 'NOPIXEL'
+    if ((isStrip EQ 1) AND (repli EQ 0)) then stripname = 'PIXEL'
+    if ((isStrip EQ 1) AND (repli EQ 1)) then stripname = 'PIXEL.REPLI'
+endif 
 
 
 ; Reading the FITS files
 
 ; G4.RAW.ASTROGAM<version>.<phys>List.<strip>.<point>.<n_in>ph.<energy>MeV.<theta>.<phi>.all.fits
 rawData_event_id = -1l
-rawData_Si_id = -1l
 rawData_tray_id =  -1l
 rawData_plane_id =  -1l
-rawData_Strip_id =  -1l
+rawData_Strip_id_x =  -1l
+rawData_Strip_id_y =  -1l
 rawData_energy_dep =  -1.
 rawData_ent_x =  -1.
 rawData_ent_y =  -1.
@@ -327,7 +349,7 @@ gams_ac_panel = ''
 gams_ac_subpanel = -1l
 gams_ac_edep = -1.
 
-filepath = './ASTROGAM'+astrogam_version+sdir+'/theta'+strtrim(string(theta_type),1)+'/'+stripDir+py_dir+'/'+sim_name+'/'+ene_type+'MeV/'+strtrim(string(N_in),1)+'ph/'
+filepath = './ASTROGAM'+astrogam_version+sdir+'/theta'+strtrim(string(theta_type),1)+'/'+stripDir+py_dir+'/'+sim_name+'/'+ene_type+'MeV/'+strtrim(string(N_in),1)+part_type+'/'
 print, 'LEVEL0 file path: ', filepath
 
 for ifile=0, n_files-1 do begin
@@ -412,7 +434,7 @@ for ifile=0, n_files-1 do begin
 ;    gams_ac_subpanel = [gams_ac_subpanel, c3]
 ;    gams_ac_edep = [gams_ac_edep, c4]
 
-    filenamefits_raw = filepath+'G4.RAW.ASTROGAM'+astrogam_version+'.'+py_name+'.'+sim_name+'.'+stripname+'.'+sname+'.'+strmid(strtrim(string(N_in),1),0,10)+'ph.'+ene_type+'MeV.'+strmid(strtrim(string(theta_type),1),0,10)+'.'+strmid(strtrim(string(phi_type),1),0,10)+'.'+strtrim(string(ifile),1)+'.fits'   
+    filenamefits_raw = filepath+'G4.RAW.ASTROGAM'+astrogam_version+'.'+py_name+'.'+sim_name+'.'+stripname+'.'+sname+'.'+strmid(strtrim(string(N_in),1),0,10)+part_type+'.'+ene_type+'MeV.'+strmid(strtrim(string(theta_type),1),0,10)+'.'+strmid(strtrim(string(phi_type),1),0,10)+'.'+strtrim(string(ifile),1)+'.fits'   
     print, filenamefits_raw
     struct_raw = mrdfits(filenamefits_raw,$ 
                      1, $
@@ -420,10 +442,10 @@ for ifile=0, n_files-1 do begin
                      /unsigned)
 
     rawData_event_id = [rawData_event_id, struct_raw.EVT_ID]
-    rawData_Si_id = [rawData_Si_id, struct_raw.TRK_FLAG]
     rawData_tray_id = [rawData_tray_id, struct_raw.TRAY_ID]
     rawData_plane_id = [rawData_plane_id, struct_raw.PLANE_ID]
-    rawData_Strip_id = [rawData_Strip_id, struct_raw.STRIP_ID]
+    rawData_Strip_id_x = [rawData_Strip_id_x, struct_raw.STRIP_ID_X]
+    rawData_Strip_id_y = [rawData_Strip_id_y, struct_raw.STRIP_ID_Y]
     rawData_energy_dep = [rawData_energy_dep, struct_raw.E_DEP]
     rawData_ent_x = [rawData_ent_x, struct_raw.X_ENT]
     rawData_ent_y = [rawData_ent_y, struct_raw.Y_ENT]
@@ -450,7 +472,7 @@ for ifile=0, n_files-1 do begin
 ;    L0TRACKERGLOBAL_Glob_zpos_test = [L0TRACKERGLOBAL_Glob_zpos_test, struct_l0.ZPOS]
 ;    L0TRACKERGLOBAL_Glob_energy_dep_test = [L0TRACKERGLOBAL_Glob_energy_dep_test, struct_l0.E_DEP]
 
-    filenamefits_l05 = filepath+'L0.5.ASTROGAM'+astrogam_version+'.'+py_name+'.'+sim_name+'.'+stripname+'.'+sname+'.'+STRMID(STRTRIM(STRING(N_IN),1),0,10)+'ph.'+ene_type+'MeV.'+STRMID(STRTRIM(STRING(THETA_TYPE),1),0,10)+'.'+STRMID(STRTRIM(STRING(PHI_TYPE),1),0,10)+'.'+strtrim(string(ifile),1)+'.fits'   
+    filenamefits_l05 = filepath+'L0.5.ASTROGAM'+astrogam_version+'.'+py_name+'.'+sim_name+'.'+stripname+'.'+sname+'.'+STRMID(STRTRIM(STRING(N_IN),1),0,10)+part_type+'.'+ene_type+'MeV.'+STRMID(STRTRIM(STRING(THETA_TYPE),1),0,10)+'.'+STRMID(STRTRIM(STRING(PHI_TYPE),1),0,10)+'.'+strtrim(string(ifile),1)+'.fits'   
     struct_l05 = mrdfits(filenamefits_l05,$ 
                      1, $
                      structyp = 'l05', $
@@ -464,7 +486,7 @@ for ifile=0, n_files-1 do begin
     L05TRACKER_Glob_zpos_cluster = [L05TRACKER_Glob_zpos_cluster, struct_l05.ZPOS]
     L05TRACKER_Glob_energy_dep_cluster = [L05TRACKER_Glob_energy_dep_cluster, struct_l05.E_DEP]
 
-    filenamefits_kalman = filepath+'KALMAN.TRACKER.ASTROGAM'+astrogam_version+'.'+py_name+'.'+sim_name+'.'+stripname+'.'+sname+'.'+STRMID(STRTRIM(STRING(N_IN),1),0,10)+'ph.'+ene_type+'MeV.'+STRMID(STRTRIM(STRING(THETA_TYPE),1),0,10)+'.'+STRMID(STRTRIM(STRING(PHI_TYPE),1),0,10)+'.'+strtrim(string(ifile),1)+'.fits'   
+    filenamefits_kalman = filepath+'KALMAN.TRACKER.ASTROGAM'+astrogam_version+'.'+py_name+'.'+sim_name+'.'+stripname+'.'+sname+'.'+STRMID(STRTRIM(STRING(N_IN),1),0,10)+part_type+'.'+ene_type+'MeV.'+STRMID(STRTRIM(STRING(THETA_TYPE),1),0,10)+'.'+STRMID(STRTRIM(STRING(PHI_TYPE),1),0,10)+'.'+strtrim(string(ifile),1)+'.fits'   
     struct_kalman = mrdfits(filenamefits_kalman,$ 
                      1, $
                      structyp = 'kalman', $
@@ -479,7 +501,7 @@ for ifile=0, n_files-1 do begin
       KALMAN_plane_y = [[KALMAN_plane_y], [struct_kalman.PIANI_X]]
       KALMAN_cluster_y = [[KALMAN_cluster_y], [struct_kalman.Clusters_Y]]
     ;endfor
-    filenamefits_sum = filepath+'SUM.TRACKER.ASTROGAM'+astrogam_version+'.'+py_name+'.'+sim_name+'.'+stripname+'.'+sname+'.'+STRMID(STRTRIM(STRING(N_IN),1),0,10)+'ph.'+ene_type+'MeV.'+STRMID(STRTRIM(STRING(THETA_TYPE),1),0,10)+'.'+STRMID(STRTRIM(STRING(PHI_TYPE),1),0,10)+'.'+strtrim(string(ifile),1)+'.fits'   
+    filenamefits_sum = filepath+'SUM.TRACKER.ASTROGAM'+astrogam_version+'.'+py_name+'.'+sim_name+'.'+stripname+'.'+sname+'.'+STRMID(STRTRIM(STRING(N_IN),1),0,10)+part_type+'.'+ene_type+'MeV.'+STRMID(STRTRIM(STRING(THETA_TYPE),1),0,10)+'.'+STRMID(STRTRIM(STRING(PHI_TYPE),1),0,10)+'.'+strtrim(string(ifile),1)+'.fits'   
     struct_sum = mrdfits(filenamefits_sum,$ 
                      1, $
                      structyp = 'sum_tracker', $
@@ -493,7 +515,7 @@ for ifile=0, n_files-1 do begin
     SUMTRACKER_Glob_energy_dep_cluster = [SUMTRACKER_Glob_energy_dep_cluster, struct_SUM.E_DEP]
 
 
-    filenamefits_cal = filepath+'G4.CAL.ASTROGAM'+astrogam_version+'.'+py_name+'.'+sim_name+'.'+stripname+'.'+sname+'.'+strmid(strtrim(string(N_in),1),0,10)+'ph.'+ene_type+'MeV.'+strmid(strtrim(string(theta_type),1),0,10)+'.'+strmid(strtrim(string(phi_type),1),0,10)+'.'+strtrim(string(ifile),1)+'.fits'   
+    filenamefits_cal = filepath+'G4.CAL.ASTROGAM'+astrogam_version+'.'+py_name+'.'+sim_name+'.'+stripname+'.'+sname+'.'+strmid(strtrim(string(N_in),1),0,10)+part_type+'.'+ene_type+'MeV.'+strmid(strtrim(string(theta_type),1),0,10)+'.'+strmid(strtrim(string(phi_type),1),0,10)+'.'+strtrim(string(ifile),1)+'.fits'   
     print, filenamefits_cal
     struct_cal = mrdfits(filenamefits_cal,$ 
                      1, $
@@ -505,7 +527,7 @@ for ifile=0, n_files-1 do begin
     calInput_bar_ene_tot = [calInput_bar_ene_tot, struct_cal.BAR_ENERGY]
  
  
-    filenamefits_cal_sum = filepath+'SUM.CAL.ASTROGAM'+astrogam_version+'.'+py_name+'.'+sim_name+'.'+stripname+'.'+sname+'.'+strmid(strtrim(string(N_in),1),0,10)+'ph.'+ene_type+'MeV.'+strmid(strtrim(string(theta_type),1),0,10)+'.'+strmid(strtrim(string(phi_type),1),0,10)+'.'+strtrim(string(ifile),1)+'.fits'   
+    filenamefits_cal_sum = filepath+'SUM.CAL.ASTROGAM'+astrogam_version+'.'+py_name+'.'+sim_name+'.'+stripname+'.'+sname+'.'+strmid(strtrim(string(N_in),1),0,10)+part_type+'.'+ene_type+'MeV.'+strmid(strtrim(string(theta_type),1),0,10)+'.'+strmid(strtrim(string(phi_type),1),0,10)+'.'+strtrim(string(ifile),1)+'.fits'   
     struct_calsum = mrdfits(filenamefits_cal_sum,$ 
                      1, $
                      structyp = 'calsum', $
@@ -844,10 +866,10 @@ endfor
 ; -----> FITS files
 ; G4.RAW.ASTROGAM<version>.<phys>List.<strip>.<point>.<n_in>ph.<energy>MeV.<theta>.<phi>.all.fits
 rawData_event_id = rawData_event_id[1:*]
-rawData_Si_id = rawData_Si_id[1:*]
 rawData_tray_id =  rawData_tray_id[1:*]
 rawData_plane_id =  rawData_plane_id[1:*]
-rawData_Strip_id =  rawData_Strip_id[1:*]
+rawData_Strip_id_x =  rawData_Strip_id_x[1:*]
+rawData_Strip_id_y =  rawData_Strip_id_y[1:*]
 rawData_energy_dep =  rawData_energy_dep[1:*]
 rawData_ent_x =  rawData_ent_x[1:*]
 rawData_ent_y =  rawData_ent_y[1:*]
@@ -911,13 +933,13 @@ calInputSum_bar_ene_tot = calInputSum_bar_ene_tot[1:*]
 ;acInput_energy_dep_tot_ac = acInput_energy_dep_tot_ac[1:*]
 
 
-CREATE_STRUCT, rawData, 'rawData', ['EVT_ID', 'TRK_FLAG', 'TRAY_ID', 'PLANE_ID', 'STRIP_ID', 'E_DEP', 'X_ENT', 'Y_ENT', 'Z_ENT', 'X_EXIT', 'Y_EXIT', 'Z_EXIT'], $
+CREATE_STRUCT, rawData, 'rawData', ['EVT_ID', 'TRAY_ID', 'PLANE_ID', 'STRIP_ID_X', 'STRIP_ID_Y', 'E_DEP', 'X_ENT', 'Y_ENT', 'Z_ENT', 'X_EXIT', 'Y_EXIT', 'Z_EXIT'], $
 'I,I,I,I,I,F20.5,F20.5,F20.5,F20.5,F20.5,F20.5,F20.5', DIMEN = n_elements(rawData_event_id)
 rawData.EVT_ID = rawData_event_id
-rawData.TRK_FLAG = rawData_Si_id
 rawData.TRAY_ID = rawData_tray_id
 rawData.PLANE_ID = rawData_plane_id
-rawData.STRIP_ID = rawData_Strip_id
+rawData.STRIP_ID_X = rawData_Strip_id_x
+rawData.STRIP_ID_Y = rawData_Strip_id_y
 rawData.E_DEP = rawData_energy_dep
 rawData.X_ENT = rawData_ent_x
 rawData.Y_ENT = rawData_ent_y
@@ -935,7 +957,7 @@ hdr_rawData = ['COMMENT  ASTROGAM '+astrogam_version+' Geant4 simulation', $
                'Position unit = cm', $
                'Energy unit = keV']
 
-MWRFITS, rawData, filepath+'G4.RAW.ASTROGAM'+astrogam_version+'.'+py_name+'.'+sim_name+'.'+stripname+'.'+sname+'.'+strmid(strtrim(string(N_in),1),0,10)+'ph.'+ene_type+'MeV.'+strmid(strtrim(string(theta_type),1),0,10)+'.'+strmid(strtrim(string(phi_type),1),0,10)+'.all.fits', hdr_rawData, /create
+MWRFITS, rawData, filepath+'G4.RAW.ASTROGAM'+astrogam_version+'.'+py_name+'.'+sim_name+'.'+stripname+'.'+sname+'.'+strmid(strtrim(string(N_in),1),0,10)+part_type+'.'+ene_type+'MeV.'+strmid(strtrim(string(theta_type),1),0,10)+'.'+strmid(strtrim(string(phi_type),1),0,10)+'.all.fits', hdr_rawData, /create
 
 ;
 ;CREATE_STRUCT, L0TRACKERGLOBAL, 'GLOBALTRACKERL0', ['EVT_ID', 'VOLUME_ID', 'MOTHER_ID', 'TRAY_ID', 'PLANE_ID','TRK_FLAG', 'STRIP_ID', 'STRIP_TYPE', 'POS', 'ZPOS','E_DEP'], 'I,J,J,I,I,I,J,J,F20.5,F20.5,F20.5', DIMEN = N_ELEMENTS(L0TRACKERGLOBAL_Glob_event_id_test)
@@ -981,7 +1003,7 @@ HDR_L05 = ['Creator          = Valentina Fioretti', $
           'ENERGY UNIT      = KEV']
 
 
-MWRFITS, L05TRACKER, filepath+'L0.5.ASTROGAM'+astrogam_version+'.'+py_name+'.'+sim_name+'.'+stripname+'.'+sname+'.'+STRMID(STRTRIM(STRING(N_IN),1),0,10)+'ph.'+ene_type+'MeV.'+STRMID(STRTRIM(STRING(THETA_TYPE),1),0,10)+'.'+STRMID(STRTRIM(STRING(PHI_TYPE),1),0,10)+'.all.fits', HDR_L05, /CREATE
+MWRFITS, L05TRACKER, filepath+'L0.5.ASTROGAM'+astrogam_version+'.'+py_name+'.'+sim_name+'.'+stripname+'.'+sname+'.'+STRMID(STRTRIM(STRING(N_IN),1),0,10)+part_type+'.'+ene_type+'MeV.'+STRMID(STRTRIM(STRING(THETA_TYPE),1),0,10)+'.'+STRMID(STRTRIM(STRING(PHI_TYPE),1),0,10)+'.all.fits', HDR_L05, /CREATE
 
 string_dim = string(default_max_cols) 
 CREATE_STRUCT, KALMANTRACKER, 'TRACKERKALMAN', ['Theta', 'Phi','Energia','Piani_X','Clusters_X', 'Piani_Y', 'Clusters_Y'], 'F,F,F,I('+string_dim+'),D('+string_dim+'),I('+string_dim+'),D('+string_dim+')', DIMEN = N_ELEMENTS(KALMAN_theta)
@@ -1002,7 +1024,7 @@ HDR_KALMAN = ['Creator          = Valentina Fioretti', $
           'PHI              = '+STRTRIM(STRING(PHI_TYPE),1)+'   /Simulated input phi angle']
 
 
-MWRFITS, KALMANTRACKER, filepath+'KALMAN.TRACKER.ASTROGAM'+astrogam_version+'.'+py_name+'.'+sim_name+'.'+stripname+'.'+sname+'.'+STRMID(STRTRIM(STRING(N_IN),1),0,10)+'ph.'+ene_type+'MeV.'+STRMID(STRTRIM(STRING(THETA_TYPE),1),0,10)+'.'+STRMID(STRTRIM(STRING(PHI_TYPE),1),0,10)+'.all.fits', HDR_KALMAN, /CREATE
+MWRFITS, KALMANTRACKER, filepath+'KALMAN.TRACKER.ASTROGAM'+astrogam_version+'.'+py_name+'.'+sim_name+'.'+stripname+'.'+sname+'.'+STRMID(STRTRIM(STRING(N_IN),1),0,10)+part_type+'.'+ene_type+'MeV.'+STRMID(STRTRIM(STRING(THETA_TYPE),1),0,10)+'.'+STRMID(STRTRIM(STRING(PHI_TYPE),1),0,10)+'.all.fits', HDR_KALMAN, /CREATE
 
 
 
@@ -1023,7 +1045,7 @@ HDR_SUM = ['Creator          = Valentina Fioretti', $
           'ENERGY UNIT      = KEV']
 
 
-MWRFITS, SUMTRACKER, filepath+'SUM.TRACKER.ASTROGAM'+astrogam_version+'.'+py_name+'.'+sim_name+'.'+stripname+'.'+sname+'.'+STRMID(STRTRIM(STRING(N_IN),1),0,10)+'ph.'+ene_type+'MeV.'+STRMID(STRTRIM(STRING(THETA_TYPE),1),0,10)+'.'+STRMID(STRTRIM(STRING(PHI_TYPE),1),0,10)+'.all.fits', HDR_SUM, /CREATE
+MWRFITS, SUMTRACKER, filepath+'SUM.TRACKER.ASTROGAM'+astrogam_version+'.'+py_name+'.'+sim_name+'.'+stripname+'.'+sname+'.'+STRMID(STRTRIM(STRING(N_IN),1),0,10)+part_type+'.'+ene_type+'MeV.'+STRMID(STRTRIM(STRING(THETA_TYPE),1),0,10)+'.'+STRMID(STRTRIM(STRING(PHI_TYPE),1),0,10)+'.all.fits', HDR_SUM, /CREATE
 
 CREATE_STRUCT, calInput, 'input_cal_dhsim', ['EVT_ID','BAR_ID', 'BAR_ENERGY'], $
 'I,I,F20.15', DIMEN = n_elements(calInput_event_id_tot_cal)
@@ -1039,7 +1061,7 @@ hdr_calInput = ['COMMENT  ASTROGAM V2.0 Geant4 simulation', $
                'Phi     = '+strtrim(string(phi_type),1), $
                'Energy unit = GeV']
 
-MWRFITS, calInput, filepath+'G4.CAL.ASTROGAM'+astrogam_version+'.'+py_name+'.'+sim_name+'.'+stripname+'.'+sname+'.'+strmid(strtrim(string(N_in),1),0,10)+'ph.'+ene_type+'MeV.'+strmid(strtrim(string(theta_type),1),0,10)+'.'+strmid(strtrim(string(phi_type),1),0,10)+'.all.fits', hdr_calInput, /create
+MWRFITS, calInput, filepath+'G4.CAL.ASTROGAM'+astrogam_version+'.'+py_name+'.'+sim_name+'.'+stripname+'.'+sname+'.'+strmid(strtrim(string(N_in),1),0,10)+part_type+'.'+ene_type+'MeV.'+strmid(strtrim(string(theta_type),1),0,10)+'.'+strmid(strtrim(string(phi_type),1),0,10)+'.all.fits', hdr_calInput, /create
 
 CREATE_STRUCT, calInputSum, 'input_cal', ['EVT_ID','BAR_ENERGY'], $
 'I,F20.15', DIMEN = n_elements(calInputSum_event_id_tot_cal)
@@ -1054,7 +1076,7 @@ hdr_calInputSum = ['COMMENT  ASTROGAM V2.0 Geant4 simulation', $
                'Phi     = '+strtrim(string(phi_type),1), $
                'Energy unit = GeV']
 
-MWRFITS, calInputSum, filepath+'SUM.CAL.ASTROGAM'+astrogam_version+'.'+py_name+'.'+sim_name+'.'+stripname+'.'+sname+'.'+strmid(strtrim(string(N_in),1),0,10)+'ph.'+ene_type+'MeV.'+strmid(strtrim(string(theta_type),1),0,10)+'.'+strmid(strtrim(string(phi_type),1),0,10)+'.all.fits', hdr_calInputSum, /create
+MWRFITS, calInputSum, filepath+'SUM.CAL.ASTROGAM'+astrogam_version+'.'+py_name+'.'+sim_name+'.'+stripname+'.'+sname+'.'+strmid(strtrim(string(N_in),1),0,10)+part_type+'.'+ene_type+'MeV.'+strmid(strtrim(string(theta_type),1),0,10)+'.'+strmid(strtrim(string(phi_type),1),0,10)+'.all.fits', hdr_calInputSum, /create
 
 ;CREATE_STRUCT, acInput, 'input_ac_dhsim', ['EVT_ID', 'AC_PANEL', 'AC_SUBPANEL', 'E_DEP'], $
 ;'I,A,I,F20.15', DIMEN = n_elements(acInput_event_id_tot_ac)

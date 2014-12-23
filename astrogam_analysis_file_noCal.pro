@@ -1,9 +1,7 @@
-; astrogam_analysis_file.pro - Description
+; astrogam_analysis_file_noCal.pro - Description
 ; ---------------------------------------------------------------------------------
 ; Processing the THELSIM ASTROGAM simulation:
 ; - Tracker
-; - AC
-; - Calorimeter
 ; ---------------------------------------------------------------------------------
 ; Output:
 ; - all files are created in a self-descripted subdirectory of the current directory. If the directory is not present it is created by the IDL script.
@@ -11,8 +9,6 @@
 ; - G4.RAW.ASTROGAM<version>.<phys>List.<sim_type>.<strip>.<point>.<n_in>ph.<energy>MeV.<theta>.<phi>.<file>.fits
 ; - L0.5.ASTROGAM<version>.<phys>List.<sim_type>.<strip>.<point>.<n_in>ph.<energy>MeV.<theta>.<phi>.<file>.fits
 ; - KALMAN.ASTROGAM<version>.<phys>List.<sim_type>.<strip>.<point>.<n_in>ph.<energy>MeV.<theta>.<phi>.<file>.fits
-; - G4.AC.ASTROGAM<version>.<phys>List.<sim_type>.<strip>.<point>.<n_in>ph.<energy>MeV.<theta>.<phi>.<file>.fits
-; - G4.CAL.ASTROGAM<version>.<phys>List.<sim_type>.<strip>.<point>.<n_in>ph.<energy>MeV.<theta>.<phi>.<file>.fits 
 ; ----------------------------------------------------------------------------------
 ; copyright            : (C) 2014 Valentina Fioretti
 ; email                : fioretti@iasfbo.inaf.it
@@ -24,7 +20,7 @@
 ; Each THELSIM FITS files individually processed
 
 
-pro astrogam_analysis_file
+pro astrogam_analysis_file_noCal
 
 
 ; Variables initialization
@@ -277,14 +273,14 @@ endif
 
 run_path = GETENV('BGRUNS')
 
-filepath = run_path + '/ASTROGAM'+astrogam_version+sdir+'/theta'+strtrim(string(theta_type),1)+'/'+stripDir+py_dir+'/'+ene_type+'MeV.'+sim_name+'.'+strtrim(string(theta_type),1)+'theta.'+strtrim(string(N_in),1)+part_type
+filepath = run_path + '/ASTROGAM'+astrogam_version+sdir+'/theta'+strtrim(string(theta_type),1)+'/'+stripDir+py_dir+'/OnlyTracker/'+ene_type+'MeV.'+sim_name+'.'+strtrim(string(theta_type),1)+'theta.'+strtrim(string(N_in),1)+part_type
 print, 'ASTROGAM simulation path: ', filepath
 
-outdir = './ASTROGAM'+astrogam_version+sdir+'/theta'+strtrim(string(theta_type),1)+'/'+stripDir+py_dir+'/'+sim_name+'/'+ene_type+'MeV/'+strtrim(string(N_in),1)+part_type
+outdir = './ASTROGAM'+astrogam_version+sdir+'/theta'+strtrim(string(theta_type),1)+'/'+stripDir+py_dir+'/'+sim_name+'/'+ene_type+'MeV/'+strtrim(string(N_in),1)+part_type+'/OnlyTracker'
 print, 'ASTROGAM outdir path: ', outdir
 
 CheckOutDir = DIR_EXIST( outdir)
-if (CheckOutDir EQ 0) then spawn,'mkdir -p ./ASTROGAM'+astrogam_version+sdir+'/theta'+strtrim(string(theta_type),1)+'/'+stripDir+py_dir+'/'+sim_name+'/'+ene_type+'MeV/'+strtrim(string(N_in),1)+part_type
+if (CheckOutDir EQ 0) then spawn,'mkdir -p ./ASTROGAM'+astrogam_version+sdir+'/theta'+strtrim(string(theta_type),1)+'/'+stripDir+py_dir+'/'+sim_name+'/'+ene_type+'MeV/'+strtrim(string(N_in),1)+part_type+'/OnlyTracker'
 
 
 for ifile=0, n_fits-1 do begin
@@ -379,28 +375,28 @@ for ifile=0, n_fits-1 do begin
          
       endif
      endif
-     ; Reading the calorimeter
-     if ((struct(k).VOLUME_ID GE cal_vol_start) AND (struct(k).VOLUME_ID LE cal_vol_end)) then begin
-      if (struct(k).E_DEP GT 0.d) then begin        
-         event_id_cal = [event_id_cal, struct(k).EVT_ID] 
-         vol_id_cal = [vol_id_cal, struct(k).VOLUME_ID] 
-         moth_id_cal = [moth_id_cal, struct(k).MOTHER_ID]
-         energy_dep_cal = [energy_dep_cal, struct(k).E_DEP] 
-        
-         ent_x_cal = [ent_x_cal, struct(k).X_ENT]  
-         ent_y_cal = [ent_y_cal, struct(k).Y_ENT]  
-         ent_z_cal = [ent_z_cal, struct(k).Z_ENT]  
-         exit_x_cal = [exit_x_cal, struct(k).X_EXIT]  
-         exit_y_cal = [exit_y_cal, struct(k).Y_EXIT]  
-         exit_z_cal = [exit_z_cal, struct(k).Z_EXIT]  
-        
-         theta_ent_cal = [theta_ent_cal, (180./!PI)*acos(-(struct(k).MDZ_ENT))]
-         phi_ent_cal = [phi_ent_cal, (180./!PI)*atan((struct(k).MDY_ENT)/(struct(k).MDX_ENT))]
-
-         theta_exit_cal = [theta_exit_cal, (180./!PI)*acos(-(struct(k).MDZ_EXIT))]
-         phi_exit_cal = [phi_exit_cal, (180./!PI)*atan((struct(k).MDY_EXIT)/(struct(k).MDX_EXIT))]        
-      endif
-     endif
+;     ; Reading the calorimeter
+;     if ((struct(k).VOLUME_ID GE cal_vol_start) AND (struct(k).VOLUME_ID LE cal_vol_end)) then begin
+;      if (struct(k).E_DEP GT 0.d) then begin        
+;         event_id_cal = [event_id_cal, struct(k).EVT_ID] 
+;         vol_id_cal = [vol_id_cal, struct(k).VOLUME_ID] 
+;         moth_id_cal = [moth_id_cal, struct(k).MOTHER_ID]
+;         energy_dep_cal = [energy_dep_cal, struct(k).E_DEP] 
+;        
+;         ent_x_cal = [ent_x_cal, struct(k).X_ENT]  
+;         ent_y_cal = [ent_y_cal, struct(k).Y_ENT]  
+;         ent_z_cal = [ent_z_cal, struct(k).Z_ENT]  
+;         exit_x_cal = [exit_x_cal, struct(k).X_EXIT]  
+;         exit_y_cal = [exit_y_cal, struct(k).Y_EXIT]  
+;         exit_z_cal = [exit_z_cal, struct(k).Z_EXIT]  
+;        
+;         theta_ent_cal = [theta_ent_cal, (180./!PI)*acos(-(struct(k).MDZ_ENT))]
+;         phi_ent_cal = [phi_ent_cal, (180./!PI)*atan((struct(k).MDY_ENT)/(struct(k).MDX_ENT))]
+;
+;         theta_exit_cal = [theta_exit_cal, (180./!PI)*acos(-(struct(k).MDZ_EXIT))]
+;         phi_exit_cal = [phi_exit_cal, (180./!PI)*atan((struct(k).MDY_EXIT)/(struct(k).MDX_EXIT))]        
+;      endif
+;     endif
 ;     if ((struct(k).VOLUME_ID GE ac_vol_start) AND (struct(k).VOLUME_ID LE ac_vol_end)) then begin
 ;      if (struct(k).E_DEP GT 0.d) then begin        
 ;         event_id_ac = [event_id_ac, struct(k).EVT_ID] 
@@ -445,23 +441,23 @@ for ifile=0, n_fits-1 do begin
     phi_exit = phi_exit[1:*]
 
     ; Calorimeter (removing fake starting value)
-    event_id_cal = event_id_cal[1:*]
-    vol_id_cal = vol_id_cal[1:*]
-    moth_id_cal = moth_id_cal[1:*]
-    energy_dep_cal = energy_dep_cal[1:*]
-
-    ent_x_cal = (ent_x_cal[1:*])/10.
-    ent_y_cal = (ent_y_cal[1:*])/10.
-    ent_z_cal = (ent_z_cal[1:*])/10.
-    exit_x_cal = (exit_x_cal[1:*])/10.
-    exit_y_cal = (exit_y_cal[1:*])/10.
-    exit_z_cal = (exit_z_cal[1:*])/10.
-
-    theta_ent_cal = theta_ent_cal[1:*]
-    phi_ent_cal = phi_ent_cal[1:*]
-
-    theta_exit_cal = theta_exit_cal[1:*]
-    phi_exit_cal = phi_exit_cal[1:*]
+;    event_id_cal = event_id_cal[1:*]
+;    vol_id_cal = vol_id_cal[1:*]
+;    moth_id_cal = moth_id_cal[1:*]
+;    energy_dep_cal = energy_dep_cal[1:*]
+;
+;    ent_x_cal = (ent_x_cal[1:*])/10.
+;    ent_y_cal = (ent_y_cal[1:*])/10.
+;    ent_z_cal = (ent_z_cal[1:*])/10.
+;    exit_x_cal = (exit_x_cal[1:*])/10.
+;    exit_y_cal = (exit_y_cal[1:*])/10.
+;    exit_z_cal = (exit_z_cal[1:*])/10.
+;
+;    theta_ent_cal = theta_ent_cal[1:*]
+;    phi_ent_cal = phi_ent_cal[1:*]
+;
+;    theta_exit_cal = theta_exit_cal[1:*]
+;    phi_exit_cal = phi_exit_cal[1:*]
 
     ; AC (removing fake starting value)
 ;    event_id_ac = event_id_ac[1:*]
@@ -3068,299 +3064,6 @@ if (astrogam_version EQ 'V3.0') then begin
 
 endif
 
-
-    ; %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    ;                             Processing the calorimeter 
-    ; %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-    print, '%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%'
-    print, '          Calorimeter Bar Energy attenuation                '
-    print, '%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%'
-
-    bar_ene = energy_dep_cal
-    
-    print, '%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%'
-    print, '                   Calorimeter                '
-    print, '              Applying the minimum cut                '
-    print, '                Summing the energy                '
-    print, '%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%'
-    
-    N_trig_cal = 0l
-    
-    event_id_tot_cal = -1l
-    vol_id_tot_cal = -1l
-    moth_id_tot_cal = -1l
-    bar_id_tot = -1l
-    bar_ene_tot = -1.
-    
-    j=0l
-    while (1) do begin
-        where_event_eq = where(event_id_cal EQ event_id_cal(j))
-        
-        N_trig_cal = N_trig_cal + 1
-        
-        vol_id_temp_cal = vol_id_cal(where_event_eq) 
-        moth_id_temp_cal = moth_id_cal(where_event_eq) 
-        bar_ene_temp = bar_ene(where_event_eq)
-            
-        r = 0l
-        while(1) do begin
-           where_vol_eq = where(vol_id_temp_cal EQ vol_id_temp_cal(r), complement = where_other_vol)
-           bar_ene_tot_temp = total(bar_ene_temp(where_vol_eq))
-           if (bar_ene_tot_temp GE E_th_cal) then begin
-             event_id_tot_cal = [event_id_tot_cal, event_id_cal(j)]
-             vol_id_tot_cal = [vol_id_tot_cal, vol_id_temp_cal(r)]
-             bar_id_tot = [bar_id_tot, vol_id_temp_cal(r) - cal_vol_start]
-             moth_id_tot_cal = [moth_id_tot_cal, moth_id_temp_cal(r)]
-             bar_ene_tot = [bar_ene_tot, total(bar_ene_temp(where_vol_eq))]
-           endif
-           if (where_other_vol(0) NE -1) then begin
-             vol_id_temp_cal = vol_id_temp_cal(where_other_vol)
-             moth_id_temp_cal = moth_id_temp_cal(where_other_vol)
-             bar_ene_temp = bar_ene_temp(where_other_vol)
-           endif else break
-        endwhile
-            
-        N_event_eq = n_elements(where_event_eq)
-        if where_event_eq(N_event_eq-1) LT (n_elements(event_id_cal)-1) then begin
-          j = where_event_eq(N_event_eq-1)+1
-        endif else break
-    endwhile
-    
-    
-    if (n_elements(event_id_tot_cal) GT 1) then begin
-      event_id_tot_cal = event_id_tot_cal[1:*]
-      vol_id_tot_cal = vol_id_tot_cal[1:*]
-      bar_id_tot = bar_id_tot[1:*]
-      moth_id_tot_cal = moth_id_tot_cal[1:*]
-      bar_ene_tot = bar_ene_tot[1:*]
-    endif
-    
-        
-    CREATE_STRUCT, calInput, 'input_cal_astrogam', ['EVT_ID', 'BAR_ID', 'BAR_ENERGY'], $
-    'I,I,F20.15', DIMEN = n_elements(event_id_tot_cal)
-    calInput.EVT_ID = event_id_tot_cal 
-    calInput.BAR_ID = bar_id_tot
-    calInput.BAR_ENERGY = bar_ene_tot
-    
-    
-    hdr_calInput = ['COMMENT  ASTROGAM V'+astrogam_version+' Geant4 simulation', $
-                   'N_in     = '+strtrim(string(N_in),1), $
-                   'Energy     = '+ene_type, $
-                   'Theta     = '+strtrim(string(theta_type),1), $
-                   'Phi     = '+strtrim(string(phi_type),1), $
-                   'Energy unit = GeV']
-    
-    MWRFITS, calInput, outdir+'/G4.CAL.ASTROGAM'+astrogam_version+'.'+py_name+'.'+sim_name+'.'+stripname+'.'+sname+'.'+strmid(strtrim(string(N_in),1),0,10)+part_type+'.'+ene_type+'MeV.'+strmid(strtrim(string(theta_type),1),0,10)+'.'+strmid(strtrim(string(phi_type),1),0,10)+'.'+strtrim(string(ifile),1)+'.fits', hdr_calInput, /create
-
-    event_id_tot_cal_sum = -1l
-    bar_ene_tot_sum = -1.
-    
-    j=0l
-    while (1) do begin
-        where_event_eq = where(event_id_tot_cal EQ event_id_tot_cal(j))
-        
-        event_id_tot_cal_sum = [event_id_tot_cal_sum, event_id_tot_cal(j)]
-        bar_ene_tot_sum = [bar_ene_tot_sum, total(bar_ene_tot(where_event_eq))]
-        
-        N_event_eq = n_elements(where_event_eq)
-        if where_event_eq(N_event_eq-1) LT (n_elements(event_id_tot_cal)-1) then begin
-          j = where_event_eq(N_event_eq-1)+1
-        endif else break
-    endwhile
-
-    event_id_tot_cal_sum = event_id_tot_cal_sum[1:*]
-    bar_ene_tot_sum = bar_ene_tot_sum[1:*]
-
-    CREATE_STRUCT, calInputSum, 'input_cal_sum', ['EVT_ID','BAR_ENERGY'], $
-    'I,F20.15', DIMEN = n_elements(event_id_tot_cal_sum)
-    calInputSum.EVT_ID = event_id_tot_cal_sum 
-    calInputSum.BAR_ENERGY = bar_ene_tot_sum
-    
-    
-    hdr_calInputSum = ['COMMENT  ASTROGAM V'+astrogam_version+' Geant4 simulation', $
-                   'N_in     = '+strtrim(string(N_in),1), $
-                   'Energy     = '+ene_type, $
-                   'Theta     = '+strtrim(string(theta_type),1), $
-                   'Phi     = '+strtrim(string(phi_type),1), $
-                   'Energy unit = GeV']
-    
-    MWRFITS, calInput, outdir+'/SUM.CAL.ASTROGAM'+astrogam_version+'.'+py_name+'.'+sim_name+'.'+stripname+'.'+sname+'.'+strmid(strtrim(string(N_in),1),0,10)+part_type+'.'+ene_type+'MeV.'+strmid(strtrim(string(theta_type),1),0,10)+'.'+strmid(strtrim(string(phi_type),1),0,10)+'.'+strtrim(string(ifile),1)+'.fits', hdr_calInputSum, /create
-
-    
-;    openw,lun,outdir+'/G4_GAMS_CAL_AGILE'+agile_version+'_'+py_name+'_'+sim_name+'_'+stripname+'_'+sname+'_'+strmid(strtrim(string(N_in),1),0,10)+'ph_'+ene_type+'MeV_'+strmid(strtrim(string(theta_type),1),0,10)+'_'+strmid(strtrim(string(phi_type),1),0,10)+'.'+strtrim(string(ifile),1)+'.dat',/get_lun
-;    ; ASCII Columns:
-;    ; - c1 = event ID
-;    ; - c2 = bar plane 
-;    ; - c3 = bar_id
-;    ; - c4 = 0
-;    ; - c5 = energy A
-;    ; - c6 = energy B
-;    
-;    ; Invert the BAR id to fit with the GAMS system
-;    ; BoGEMMS XBARv gives the inverted GAMS YBARk
-;    ; BoGEMMS YBARv gives the GAMS XBARk
-;    
-;    
-;    gams_bar_plane_tot = intarr(n_elements(bar_plane_tot))
-;    gams_bar_id_tot = intarr(n_elements(bar_id_tot))
-;    for jcal=0, n_elements(event_id_tot_cal)-1 do begin
-;        if (bar_plane_tot(jcal) EQ 1) then begin
-;           gams_bar_plane_tot(jcal) = 1
-;           ; bar id starts from 1
-;           gams_bar_id_tot(jcal) = bar_id_tot(jcal)
-;        endif
-;        if (bar_plane_tot(jcal) EQ 2) then begin
-;           gams_bar_plane_tot(jcal) = 2
-;           gams_bar_id_tot(jcal) = bar_id_tot(jcal)
-;        endif
-;    endfor
-;    
-;    
-;    j=0l
-;    while (1) do begin
-;        printf, lun, (event_id_tot_cal(j)+1), gams_bar_plane_tot(j), gams_bar_id_tot(j), 0, ene_a_tot(j),ene_b_tot(j);, format='(I5,2x,I5,2x,I5,2x,I5,2x,F10.10,2x,F10.10)'
-;
-;        if (j LT (n_elements(event_id_tot_cal)-1)) then begin
-;          j = j+1
-;        endif else break
-;    endwhile
-;    
-;    Free_lun, lun
-
-
-    print, '%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%'
-    print, '                          AC'
-    print, '                  Summing the energy                '
-    print, '%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%'
-    
-;    N_trig_ac = 0l
-;    
-;    event_id_tot_ac = -1l
-;    vol_id_tot_ac = -1l
-;    moth_id_tot_ac = -1l
-;    energy_dep_tot_ac = -1.
-;    
-;    j=0l
-;    while (1) do begin
-;        where_event_eq = where(event_id_ac EQ event_id_ac(j))
-;        
-;        N_trig_ac = N_trig_ac + 1
-;        
-;        vol_id_temp_ac = vol_id_ac(where_event_eq) 
-;        moth_id_temp_ac = moth_id_ac(where_event_eq) 
-;        energy_dep_temp_ac = energy_dep_ac(where_event_eq) 
-;            
-;        r = 0l
-;        while(1) do begin
-;           where_vol_eq = where(vol_id_temp_ac EQ vol_id_temp_ac(r), complement = where_other_vol)
-;           event_id_tot_ac = [event_id_tot_ac, event_id_ac(j)]
-;           vol_id_tot_ac = [vol_id_tot_ac, vol_id_temp_ac(r)]
-;           moth_id_tot_ac = [moth_id_tot_ac, moth_id_temp_ac(r)]
-;           energy_dep_tot_ac = [energy_dep_tot_ac, total(energy_dep_temp_ac(where_vol_eq))]
-;           if (where_other_vol(0) NE -1) then begin
-;             vol_id_temp_ac = vol_id_temp_ac(where_other_vol)
-;             moth_id_temp_ac = moth_id_temp_ac(where_other_vol)
-;             energy_dep_temp_ac = energy_dep_temp_ac(where_other_vol)
-;           endif else break
-;        endwhile
-;            
-;        N_event_eq = n_elements(where_event_eq)
-;        if where_event_eq(N_event_eq-1) LT (n_elements(event_id_ac)-1) then begin
-;          j = where_event_eq(N_event_eq-1)+1
-;        endif else break
-;    endwhile
-;    
-;    
-;    if (n_elements(event_id_tot_ac) GT 1) then begin
-;      event_id_tot_ac = event_id_tot_ac[1:*]
-;      vol_id_tot_ac = vol_id_tot_ac[1:*]
-;      moth_id_tot_ac = moth_id_tot_ac[1:*]
-;      energy_dep_tot_ac = energy_dep_tot_ac[1:*]
-;    endif
-;    
-;    ; AC panel IDs
-;    
-;    AC_panel = strarr(n_elements(vol_id_tot_ac))
-;    AC_subpanel = intarr(n_elements(vol_id_tot_ac))
-;    
-;    
-;    for j=0l, n_elements(vol_id_tot_ac)-1 do begin
-;     if ((vol_id_tot_ac(j) GE panel_S[0]) AND (vol_id_tot_ac(j) LE panel_S[2])) then begin
-;        AC_panel(j) = 'S'
-;        if (vol_id_tot_ac(j) EQ panel_S[0]) then AC_subpanel(j) = 3
-;        if (vol_id_tot_ac(j) EQ panel_S[1]) then AC_subpanel(j) = 2
-;        if (vol_id_tot_ac(j) EQ panel_S[2]) then AC_subpanel(j) = 1
-;     endif
-;     if ((vol_id_tot_ac(j) GE panel_D[0]) AND (vol_id_tot_ac(j) LE panel_D[2])) then begin
-;        AC_panel(j) = 'D'
-;        if (vol_id_tot_ac(j) EQ panel_D[0]) then AC_subpanel(j) = 3
-;        if (vol_id_tot_ac(j) EQ panel_D[1]) then AC_subpanel(j) = 2
-;        if (vol_id_tot_ac(j) EQ panel_D[2]) then AC_subpanel(j) = 1
-;     endif
-;     if ((vol_id_tot_ac(j) GE panel_F[0]) AND (vol_id_tot_ac(j) LE panel_F[2])) then begin
-;        AC_panel(j) = 'F'
-;        if (vol_id_tot_ac(j) EQ panel_F[0]) then AC_subpanel(j) = 1
-;        if (vol_id_tot_ac(j) EQ panel_F[1]) then AC_subpanel(j) = 2
-;        if (vol_id_tot_ac(j) EQ panel_F[2]) then AC_subpanel(j) = 3
-;     endif
-;     if ((vol_id_tot_ac(j) GE panel_B[0]) AND (vol_id_tot_ac(j) LE panel_B[2])) then begin
-;        AC_panel(j) = 'B'
-;        if (vol_id_tot_ac(j) EQ panel_B[0]) then AC_subpanel(j) = 1
-;        if (vol_id_tot_ac(j) EQ panel_B[1]) then AC_subpanel(j) = 2
-;        if (vol_id_tot_ac(j) EQ panel_B[2]) then AC_subpanel(j) = 3
-;     endif
-;     if (vol_id_tot_ac(j) EQ panel_top) then begin
-;        AC_panel(j) = 'T'
-;        AC_subpanel(j) = 0
-;     endif
-;    endfor
-;    
-;    CREATE_STRUCT, acInput, 'input_ac_dhsim', ['EVT_ID', 'AC_PANEL', 'AC_SUBPANEL', 'E_DEP'], $
-;    'I,A,I,F20.15', DIMEN = n_elements(event_id_tot_ac)
-;    acInput.EVT_ID = event_id_tot_ac
-;    acInput.AC_PANEL = AC_panel
-;    acInput.AC_SUBPANEL = AC_subpanel
-;    acInput.E_DEP = energy_dep_tot_ac
-;    
-;    
-;    hdr_acInput = ['COMMENT  AGILE V2.0 Geant4 simulation', $
-;                   'N_in     = '+strtrim(string(N_in),1), $
-;                   'Energy     = '+ene_type, $
-;                   'Theta     = '+strtrim(string(theta_type),1), $
-;                   'Phi     = '+strtrim(string(phi_type),1), $
-;                   'Energy unit = GeV']
-;    
-;    MWRFITS, acInput, outdir+'/G4.AC.AGILE'+agile_version+'.'+py_name+'.'+sim_name+'.'+stripname+'.'+sname+'.'+strmid(strtrim(string(N_in),1),0,10)+'ph.'+ene_type+'MeV.'+strmid(strtrim(string(theta_type),1),0,10)+'.'+strmid(strtrim(string(phi_type),1),0,10)+'.'+strtrim(string(ifile),1)+'.fits', hdr_acInput, /create
-;    
-;    openw,lun,outdir+'/G4_GAMS_AC_AGILE'+agile_version+'_'+py_name+'_'+sim_name+'_'+stripname+'_'+sname+'_'+strmid(strtrim(string(N_in),1),0,10)+'ph_'+ene_type+'MeV_'+strmid(strtrim(string(theta_type),1),0,10)+'_'+strmid(strtrim(string(phi_type),1),0,10)+'.'+strtrim(string(ifile),1)+'.dat',/get_lun
-;    ; ASCII Columns:
-;    ; - c1 = event ID
-;    ; - c2 = AC panel
-;    ; - c3 = AC subpanel
-;    ; - c4 = energy deposit
-;
-;    
-;    gams_AC_panel = AC_panel
-;    ;gams_AC_panel = strarr(n_elements(AC_panel))
-;    ;for jac=0, n_elements(event_id_tot)-1 do begin
-;    ;    if (AC_panel(jac) EQ 'S') then gams_AC_panel(jac) = 'B'
-;    ;    if (AC_panel(jac) EQ 'F') then gams_AC_panel(jac) = 'S'
-;    ;    if (AC_panel(jac) EQ 'D') then gams_AC_panel(jac) = 'F'
-;    ;    if (AC_panel(jac) EQ 'B') then gams_AC_panel(jac) = 'D'    
-;    ;    if (AC_panel(jac) EQ 'T') then gams_AC_panel(jac) = 'T'    
-;    ;endfor
-;    
-;    j=0l
-;    while (1) do begin
-;        printf, lun, (event_id_tot_ac(j)+1),gams_AC_panel(j), AC_subpanel(j), energy_dep_tot_ac(j), format='(I5,2x,A,2x,I5,2x,F20.15)'
-;    
-;        if (j LT (n_elements(event_id_tot_ac)-1)) then begin
-;          j = j+1
-;        endif else break
-;    endwhile
-;    
-;    Free_lun, lun
     
     endfor
 end
