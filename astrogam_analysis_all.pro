@@ -164,6 +164,17 @@ rawData_exit_x =  -1.
 rawData_exit_y =  -1.
 rawData_exit_z =  -1.
 
+; L0.ASTROGAM<version>.<phys>List.<strip>.<point>.<n_in>ph.<energy>MeV.<theta>.<phi>.all.fits
+L0TRACKER_Glob_event_id = -1l
+L0TRACKER_Glob_vol_id = -1l
+L0TRACKER_Glob_moth_id = -1l
+L0TRACKER_Glob_tray_id = -1l
+L0TRACKER_Glob_plane_id = -1l
+L0TRACKER_Glob_Si_id = -1l
+L0TRACKER_Glob_Strip_id = -1l
+L0TRACKER_Glob_pos = -1.
+L0TRACKER_Glob_zpos = -1.
+L0TRACKER_Glob_energy_dep = -1.
 
 ; L0.5.ASTROGAM<version>.<phys>List.<strip>.<point>.<n_in>ph.<energy>MeV.<theta>.<phi>.all.fits
 L05TRACKER_Glob_event_id_cluster = -1l
@@ -176,6 +187,7 @@ L05TRACKER_Glob_energy_dep_cluster = -1.
 
 ; KALMAN.ASTROGAM<version>.<phys>List.<strip>.<point>.<n_in>ph.<energy>MeV.<theta>.<phi>.all.fits
 default_max_cols = 1000
+KALMAN_eventid = float(-1l)
 KALMAN_theta = float(-1l)
 KALMAN_phi = float(-1l)
 KALMAN_energy = float(-1l)
@@ -472,6 +484,23 @@ for ifile=0, n_files-1 do begin
 ;    L0TRACKERGLOBAL_Glob_zpos_test = [L0TRACKERGLOBAL_Glob_zpos_test, struct_l0.ZPOS]
 ;    L0TRACKERGLOBAL_Glob_energy_dep_test = [L0TRACKERGLOBAL_Glob_energy_dep_test, struct_l0.E_DEP]
 
+    filenamefits_l0 = filepath+'L0.ASTROGAM'+astrogam_version+'.'+py_name+'.'+sim_name+'.'+stripname+'.'+sname+'.'+STRMID(STRTRIM(STRING(N_IN),1),0,10)+part_type+'.'+ene_type+'MeV.'+STRMID(STRTRIM(STRING(THETA_TYPE),1),0,10)+'.'+STRMID(STRTRIM(STRING(PHI_TYPE),1),0,10)+'.'+strtrim(string(ifile),1)+'.fits'   
+    struct_l0 = mrdfits(filenamefits_l0,$ 
+                     1, $
+                     structyp = 'l0', $
+                     /unsigned)
+
+    L0TRACKER_Glob_event_id = [L0TRACKER_Glob_event_id, struct_l0.EVT_ID]
+    L0TRACKER_Glob_vol_id = [L0TRACKER_Glob_vol_id, struct_l0.VOLUME_ID]
+    L0TRACKER_Glob_moth_id = [L0TRACKER_Glob_moth_id, struct_l0.MOTHER_ID]
+    L0TRACKER_Glob_tray_id = [L0TRACKER_Glob_tray_id, struct_l0.TRAY_ID]
+    L0TRACKER_Glob_plane_id = [L0TRACKER_Glob_plane_id, struct_l0.PLANE_ID]
+    L0TRACKER_Glob_Si_id = [L0TRACKER_Glob_Si_id, struct_l0.TRK_FLAG]    
+    L0TRACKER_Glob_Strip_id = [L0TRACKER_Glob_Strip_id, struct_l0.STRIP_ID]    
+    L0TRACKER_Glob_pos = [L0TRACKER_Glob_pos, struct_l0.POS]
+    L0TRACKER_Glob_zpos = [L0TRACKER_Glob_zpos, struct_l0.ZPOS]
+    L0TRACKER_Glob_energy_dep = [L0TRACKER_Glob_energy_dep, struct_l0.E_DEP]
+
     filenamefits_l05 = filepath+'L0.5.ASTROGAM'+astrogam_version+'.'+py_name+'.'+sim_name+'.'+stripname+'.'+sname+'.'+STRMID(STRTRIM(STRING(N_IN),1),0,10)+part_type+'.'+ene_type+'MeV.'+STRMID(STRTRIM(STRING(THETA_TYPE),1),0,10)+'.'+STRMID(STRTRIM(STRING(PHI_TYPE),1),0,10)+'.'+strtrim(string(ifile),1)+'.fits'   
     struct_l05 = mrdfits(filenamefits_l05,$ 
                      1, $
@@ -492,13 +521,14 @@ for ifile=0, n_files-1 do begin
                      structyp = 'kalman', $
                      /unsigned)
 
+    KALMAN_eventid = [KALMAN_eventid, struct_kalman.Event_ID]
     KALMAN_theta = [KALMAN_theta, struct_kalman.Theta]
     KALMAN_phi = [KALMAN_phi, struct_kalman.Phi]
     KALMAN_energy = [KALMAN_energy, struct_kalman.ENERGIA]
     ;for jev = 0l, n_elements(struct_kalman.Theta)-1 do begin
       KALMAN_plane_x = [[KALMAN_plane_x], [struct_kalman.PIANI_X]]    
       KALMAN_cluster_x = [[KALMAN_cluster_x], [struct_kalman.Clusters_X]]
-      KALMAN_plane_y = [[KALMAN_plane_y], [struct_kalman.PIANI_X]]
+      KALMAN_plane_y = [[KALMAN_plane_y], [struct_kalman.PIANI_Y]]
       KALMAN_cluster_y = [[KALMAN_cluster_y], [struct_kalman.Clusters_Y]]
     ;endfor
     filenamefits_sum = filepath+'SUM.TRACKER.ASTROGAM'+astrogam_version+'.'+py_name+'.'+sim_name+'.'+stripname+'.'+sname+'.'+STRMID(STRTRIM(STRING(N_IN),1),0,10)+part_type+'.'+ene_type+'MeV.'+STRMID(STRTRIM(STRING(THETA_TYPE),1),0,10)+'.'+STRMID(STRTRIM(STRING(PHI_TYPE),1),0,10)+'.'+strtrim(string(ifile),1)+'.fits'   
@@ -891,6 +921,18 @@ rawData_exit_z = rawData_exit_z[1:*]
 ;L0TRACKERGLOBAL_Glob_zpos_test = L0TRACKERGLOBAL_Glob_zpos_test[1:*]
 ;L0TRACKERGLOBAL_Glob_energy_dep_test = L0TRACKERGLOBAL_Glob_energy_dep_test[1:*]
 
+
+L0TRACKER_Glob_event_id = L0TRACKER_Glob_event_id[1:*]
+L0TRACKER_Glob_vol_id = L0TRACKER_Glob_vol_id[1:*]
+L0TRACKER_Glob_moth_id = L0TRACKER_Glob_moth_id[1:*]
+L0TRACKER_Glob_tray_id = L0TRACKER_Glob_tray_id[1:*]
+L0TRACKER_Glob_plane_id = L0TRACKER_Glob_plane_id[1:*]
+L0TRACKER_Glob_Si_id = L0TRACKER_Glob_Si_id[1:*]
+L0TRACKER_Glob_Strip_id = L0TRACKER_Glob_Strip_id[1:*]
+L0TRACKER_Glob_pos = L0TRACKER_Glob_pos[1:*]
+L0TRACKER_Glob_zpos = L0TRACKER_Glob_zpos[1:*]
+L0TRACKER_Glob_energy_dep = L0TRACKER_Glob_energy_dep[1:*]
+
 ; L0.5.ASTROGAM<version>.<phys>List.<strip>.<point>.<n_in>ph.<energy>MeV.<theta>.<phi>.all.fits
 L05TRACKER_Glob_event_id_cluster = L05TRACKER_Glob_event_id_cluster[1:*]
 L05TRACKER_Glob_tray_id_cluster = L05TRACKER_Glob_tray_id_cluster[1:*]
@@ -901,6 +943,7 @@ L05TRACKER_Glob_zpos_cluster = L05TRACKER_Glob_zpos_cluster[1:*]
 L05TRACKER_Glob_energy_dep_cluster = L05TRACKER_Glob_energy_dep_cluster[1:*]
 
 ; KALMAN.TRACKER.ASTROGAM<version>.<phys>List.<strip>.<point>.<n_in>ph.<energy>MeV.<theta>.<phi>.all.fits
+KALMAN_eventid = KALMAN_eventid[1:*]
 KALMAN_theta = KALMAN_theta[1:*]
 KALMAN_phi = KALMAN_phi[1:*]
 KALMAN_energy = KALMAN_energy[1:*]
@@ -985,6 +1028,30 @@ MWRFITS, rawData, filepath+'G4.RAW.ASTROGAM'+astrogam_version+'.'+py_name+'.'+si
 ;MWRFITS, L0TRACKERGLOBAL, filepath+'L0.AGILE'+astrogam_version+'.'+py_name+'.'+sim_name+'.'+stripname+'.'+sname+'.'+STRMID(STRTRIM(STRING(N_IN),1),0,10)+'ph.'+ene_type+'MeV.'+STRMID(STRTRIM(STRING(THETA_TYPE),1),0,10)+'.'+STRMID(STRTRIM(STRING(PHI_TYPE),1),0,10)+'.all.fits', HDR_L0GLOBAL, /CREATE
 ;
 
+CREATE_STRUCT, L0TRACKER, 'TRACKERL0', ['EVT_ID', 'VOLUME_ID', 'MOTHER_ID', 'TRAY_ID','PLANE_ID','TRK_FLAG', 'STRIP_ID', 'POS', 'ZPOS','E_DEP'], 'J,J,J,I,I,I,J,F20.5,F20.5,F20.5', DIMEN = N_ELEMENTS(L0TRACKER_Glob_event_id)
+L0TRACKER.EVT_ID = L0TRACKER_Glob_event_id
+L0TRACKER.VOLUME_ID = L0TRACKER_Glob_vol_id
+L0TRACKER.MOTHER_ID = L0TRACKER_Glob_moth_id
+L0TRACKER.TRAY_ID = L0TRACKER_Glob_tray_id
+L0TRACKER.PLANE_ID = L0TRACKER_Glob_plane_id
+L0TRACKER.TRK_FLAG = L0TRACKER_Glob_Si_id
+L0TRACKER.STRIP_ID = L0TRACKER_Glob_Strip_id
+L0TRACKER.POS = L0TRACKER_Glob_pos
+L0TRACKER.ZPOS = L0TRACKER_Glob_zpos
+L0TRACKER.E_DEP = L0TRACKER_Glob_energy_dep
+
+HDR_L0 = ['Creator          = Valentina Fioretti', $
+          'THELSim release  = ASTROGAM '+astrogam_version, $
+          'N_IN             = '+STRTRIM(STRING(N_IN),1)+'   /Number of simulated particles', $
+          'ENERGY           = '+ene_type+'   /Simulated input energy', $
+          'THETA            = '+STRTRIM(STRING(THETA_TYPE),1)+'   /Simulated input theta angle', $
+          'PHI              = '+STRTRIM(STRING(PHI_TYPE),1)+'   /Simulated input phi angle', $
+          'ENERGY UNIT      = KEV']
+
+
+MWRFITS, L0TRACKER, filepath+'L0.ASTROGAM'+astrogam_version+'.'+py_name+'.'+sim_name+'.'+stripname+'.'+sname+'.'+STRMID(STRTRIM(STRING(N_IN),1),0,10)+part_type+'.'+ene_type+'MeV.'+STRMID(STRTRIM(STRING(THETA_TYPE),1),0,10)+'.'+STRMID(STRTRIM(STRING(PHI_TYPE),1),0,10)+'.all.fits', HDR_L0, /CREATE
+
+
 CREATE_STRUCT, L05TRACKER, 'TRACKERL05', ['EVT_ID', 'TRAY_ID','PLANE_ID','TRK_FLAG', 'POS', 'ZPOS','E_DEP'], 'J,I,I,I,F20.5,F20.5,F20.5', DIMEN = N_ELEMENTS(L05TRACKER_Glob_event_id_cluster)
 L05TRACKER.EVT_ID = L05TRACKER_Glob_event_id_cluster
 L05TRACKER.TRAY_ID = L05TRACKER_Glob_tray_id_cluster
@@ -1006,7 +1073,8 @@ HDR_L05 = ['Creator          = Valentina Fioretti', $
 MWRFITS, L05TRACKER, filepath+'L0.5.ASTROGAM'+astrogam_version+'.'+py_name+'.'+sim_name+'.'+stripname+'.'+sname+'.'+STRMID(STRTRIM(STRING(N_IN),1),0,10)+part_type+'.'+ene_type+'MeV.'+STRMID(STRTRIM(STRING(THETA_TYPE),1),0,10)+'.'+STRMID(STRTRIM(STRING(PHI_TYPE),1),0,10)+'.all.fits', HDR_L05, /CREATE
 
 string_dim = string(default_max_cols) 
-CREATE_STRUCT, KALMANTRACKER, 'TRACKERKALMAN', ['Theta', 'Phi','Energia','Piani_X','Clusters_X', 'Piani_Y', 'Clusters_Y'], 'F,F,F,I('+string_dim+'),D('+string_dim+'),I('+string_dim+'),D('+string_dim+')', DIMEN = N_ELEMENTS(KALMAN_theta)
+CREATE_STRUCT, KALMANTRACKER, 'TRACKERKALMAN', ['Event_ID', 'Theta', 'Phi','Energia','Piani_X','Clusters_X', 'Piani_Y', 'Clusters_Y'],'J,F,F,F,I('+string_dim+'),D('+string_dim+'),I('+string_dim+'),D('+string_dim+')', DIMEN = N_ELEMENTS(KALMAN_theta)
+KALMANTRACKER.Event_id = KALMAN_eventid
 KALMANTRACKER.Theta = KALMAN_theta
 KALMANTRACKER.Phi = KALMAN_phi
 KALMANTRACKER.Energia = KALMAN_energy

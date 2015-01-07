@@ -811,9 +811,11 @@ endif
 
 if (astrogam_version EQ 'V3.0') then begin
     
-    CREATE_STRUCT, rawData, 'rawData', ['EVT_ID', 'TRAY_ID', 'PLANE_ID', 'STRIP_ID_X', 'STRIP_ID_Y', 'E_DEP', 'X_ENT', 'Y_ENT', 'Z_ENT', 'X_EXIT', 'Y_EXIT', 'Z_EXIT'], $
-    'I,I,I,I,I,F20.5,F20.5,F20.5,F20.5,F20.5,F20.5,F20.5', DIMEN = n_elements(event_id)
+    CREATE_STRUCT, rawData, 'rawData', ['EVT_ID', 'VOL_ID', 'MOTH_ID', 'TRAY_ID', 'PLANE_ID', 'STRIP_ID_X', 'STRIP_ID_Y', 'E_DEP', 'X_ENT', 'Y_ENT', 'Z_ENT', 'X_EXIT', 'Y_EXIT', 'Z_EXIT'], $
+    'I,I,J,I,I,I,I,F20.5,F20.5,F20.5,F20.5,F20.5,F20.5,F20.5', DIMEN = n_elements(event_id)
     rawData.EVT_ID = event_id
+    rawData.VOL_ID = vol_id
+    rawData.MOTH_ID = moth_id
     rawData.TRAY_ID = tray_id
     rawData.PLANE_ID = plane_id
     rawData.STRIP_ID_X = Strip_id_x
@@ -1932,7 +1934,8 @@ endif
           max_arraydim_x = 0
           max_arraydim_y = 0
           
-          theta_kalman = fltarr(N_trig)
+          eventid_kalman = fltarr(N_trig)
+	  theta_kalman = fltarr(N_trig)
           phi_kalman = fltarr(N_trig)
           energy_kalman = fltarr(N_trig)
           
@@ -2009,7 +2012,11 @@ endif
                        while (1) do begin
                            where_si_eq = where(Si_id_temp_plane EQ Si_id_temp_plane(last))
                            
+			   print, 'Event ID: ', Glob_event_id_cluster(j)
+			   print, 'Same Si id:', Si_id_temp_plane(last)
+			   
                            temp_samesi = pos_temp_plane(where_si_eq)
+			   print, 'temp_samesi: ', temp_si 
                            ; GAMS array 
                            if ((Si_id_temp_plane(last) EQ 2) or (Si_id_temp_plane(last) EQ 0)) then begin
                               for jel = 0l, n_elements(temp_samesi)-1 do begin
@@ -2062,6 +2069,7 @@ endif
                   endif else break      
               endwhile
               
+              eventid_kalman(check_N_trig) = Glob_event_id_cluster(j)
               theta_kalman(check_N_trig) = theta_type
               phi_kalman(check_N_trig) = phi_type
               energy_kalman(check_N_trig) = ene_type
@@ -2087,8 +2095,9 @@ endif
       ;    cluster_y_array = cluster_y_array[keepcols, *]
           
           string_dim = string(default_max_cols)    
-          CREATE_STRUCT, KALMANTRACKER, 'TRACKERKALMAN', ['Theta', 'Phi','Energia','Piani_X','Clusters_X', 'Piani_Y', 'Clusters_Y'], 'F,F,F,I('+string_dim+'),D('+string_dim+'),I('+string_dim+'),D('+string_dim+')', DIMEN = N_ELEMENTS(theta_kalman)
+          CREATE_STRUCT, KALMANTRACKER, 'TRACKERKALMAN', ['Event_ID', 'Theta', 'Phi','Energia','Piani_X','Clusters_X', 'Piani_Y', 'Clusters_Y'], 'J,F,F,F,I('+string_dim+'),D('+string_dim+'),I('+string_dim+'),D('+string_dim+')', DIMEN = N_ELEMENTS(theta_kalman)
       
+          KALMANTRACKER.Event_ID = eventid_kalman
           KALMANTRACKER.Theta = float(theta_kalman)
           KALMANTRACKER.Phi = float(phi_kalman)
           KALMANTRACKER.Energia = float(energy_kalman)
@@ -2472,6 +2481,231 @@ if (astrogam_version EQ 'V3.0') then begin
     
 
         print, 'N_ev: ', N_ev
+	
+	    
+    
+    print, '%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%'
+    print, '                      Tracker   '
+    print, '              Build the LEVEL 0 output            '
+    print, '%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%'
+    
+            
+    Glob_event_id_test = -1l 
+    Glob_vol_id_test = -1l 
+    Glob_moth_id_test = -1l 
+    Glob_Strip_id_test = -1l 
+    Glob_Si_id_test = -1l 
+    Glob_tray_id_test = -1l 
+    Glob_plane_id_test = -1l 
+    Glob_pos_test = -1.
+    Glob_zpos_test = -1. 
+    Glob_energy_dep_test = -1.
+    
+    
+    for j=0l, N_trig -1 do begin
+       
+       where_test_x = where(Glob_energy_dep_x_top[*,j] GT 0.)
+    
+       if (where_test_x(0) NE -1) then begin
+         Glob_vol_id_x_test_temp = Glob_vol_id_x_top[where_test_x,j]
+         Glob_moth_id_x_test_temp = Glob_moth_id_x_top[where_test_x,j]
+         Glob_Strip_id_x_test_temp = Glob_Strip_id_x_top[where_test_x,j]
+         Glob_Si_id_x_test_temp = Glob_Si_id_x_top[where_test_x,j]
+         Glob_tray_id_x_test_temp = Glob_tray_id_x_top[where_test_x,j]
+         Glob_plane_id_x_test_temp = Glob_plane_id_x_top[where_test_x,j]
+         Glob_xpos_x_test_temp = Glob_xpos_x_top[where_test_x,j]
+         Glob_zpos_x_test_temp = Glob_zpos_x_top[where_test_x,j]
+         Glob_energy_dep_x_test_temp = Glob_energy_dep_x_top[where_test_x,j]
+       endif
+    
+    
+       where_test_y = where(Glob_energy_dep_y_top[*,j] GT 0.)
+     
+       if (where_test_y(0) NE -1) then begin
+         Glob_vol_id_y_test_temp = Glob_vol_id_y_top[where_test_y,j]
+         Glob_moth_id_y_test_temp = Glob_moth_id_y_top[where_test_y,j]
+         Glob_Strip_id_y_test_temp = Glob_Strip_id_y_top[where_test_y,j]
+         Glob_Si_id_y_test_temp = Glob_Si_id_y_top[where_test_y,j]
+         Glob_tray_id_y_test_temp = Glob_tray_id_y_top[where_test_y,j]
+         Glob_plane_id_y_test_temp = Glob_plane_id_y_top[where_test_y,j]
+         Glob_ypos_y_test_temp = Glob_ypos_y_top[where_test_y,j]
+         Glob_zpos_y_test_temp = Glob_zpos_y_top[where_test_y,j]
+         Glob_energy_dep_y_test_temp = Glob_energy_dep_y_top[where_test_y,j]
+       endif
+    
+       if ((where_test_y(0) NE -1) AND (where_test_x(0) NE -1)) then begin
+        Glob_vol_id_test_temp = [Glob_vol_id_y_test_temp, Glob_vol_id_x_test_temp]
+        Glob_moth_id_test_temp = [Glob_moth_id_y_test_temp, Glob_moth_id_x_test_temp]
+        Glob_Strip_id_test_temp = [Glob_Strip_id_y_test_temp, Glob_Strip_id_x_test_temp]
+        Glob_Si_id_test_temp = [Glob_Si_id_y_test_temp, Glob_Si_id_x_test_temp]
+        Glob_tray_id_test_temp = [Glob_tray_id_y_test_temp, Glob_tray_id_x_test_temp]
+        Glob_plane_id_test_temp = [Glob_plane_id_y_test_temp, Glob_plane_id_x_test_temp]
+        Glob_pos_test_temp = [Glob_ypos_y_test_temp, Glob_xpos_x_test_temp]
+        Glob_zpos_test_temp = [Glob_zpos_y_test_temp, Glob_zpos_x_test_temp]
+        Glob_energy_dep_test_temp = [Glob_energy_dep_y_test_temp, Glob_energy_dep_x_test_temp]
+       endif else begin
+        if ((where_test_y(0) NE -1) AND (where_test_x(0) EQ -1)) then begin
+         Glob_vol_id_test_temp = Glob_vol_id_y_test_temp
+         Glob_moth_id_test_temp = Glob_moth_id_y_test_temp
+         Glob_Strip_id_test_temp = Glob_Strip_id_y_test_temp
+         Glob_Si_id_test_temp = Glob_Si_id_y_test_temp
+         Glob_tray_id_test_temp = Glob_tray_id_y_test_temp
+         Glob_plane_id_test_temp = Glob_plane_id_y_test_temp
+         Glob_pos_test_temp = Glob_ypos_y_test_temp
+         Glob_zpos_test_temp = Glob_zpos_y_test_temp
+         Glob_energy_dep_test_temp = Glob_energy_dep_y_test_temp
+        endif else begin
+         if ((where_test_y(0) EQ -1) AND (where_test_x(0) NE -1)) then begin
+          Glob_vol_id_test_temp = Glob_vol_id_x_test_temp
+          Glob_moth_id_test_temp = Glob_moth_id_x_test_temp
+          Glob_Strip_id_test_temp = Glob_Strip_id_x_test_temp
+          Glob_Si_id_test_temp = Glob_Si_id_x_test_temp
+          Glob_tray_id_test_temp = Glob_tray_id_x_test_temp
+          Glob_plane_id_test_temp = Glob_plane_id_x_test_temp
+          Glob_pos_test_temp = Glob_xpos_x_test_temp
+          Glob_zpos_test_temp = Glob_zpos_x_test_temp
+          Glob_energy_dep_test_temp = Glob_energy_dep_x_test_temp
+         endif
+        endelse
+       endelse   
+       
+       tray_sort_arr = sort(Glob_tray_id_test_temp)
+        
+       Glob_vol_id_test_temp = Glob_vol_id_test_temp[reverse(tray_sort_arr)]
+       Glob_moth_id_test_temp = Glob_moth_id_test_temp[reverse(tray_sort_arr)]
+       Glob_Strip_id_test_temp = Glob_Strip_id_test_temp[reverse(tray_sort_arr)]
+       Glob_Si_id_test_temp = Glob_Si_id_test_temp[reverse(tray_sort_arr)]
+       Glob_tray_id_test_temp = Glob_tray_id_test_temp[reverse(tray_sort_arr)]
+       Glob_plane_id_test_temp = Glob_plane_id_test_temp[reverse(tray_sort_arr)]
+       Glob_pos_test_temp = Glob_pos_test_temp[reverse(tray_sort_arr)]
+       Glob_zpos_test_temp = Glob_zpos_test_temp[reverse(tray_sort_arr)]
+       Glob_energy_dep_test_temp = Glob_energy_dep_test_temp[reverse(tray_sort_arr)]
+    
+       vol_id_intray = -1l
+       moth_id_intray = -1l
+       Strip_id_intray = -1l
+       Si_id_intray = -1l
+       tray_id_intray = -1l
+       plane_id_intray = -1l
+       pos_intray = -1.
+       zpos_intray = -1.
+       energy_dep_intray = -1.
+           
+        intray = 0l
+        while(1) do begin
+           where_tray_eq = where(Glob_tray_id_test_temp EQ Glob_tray_id_test_temp(intray), complement = where_other_tray)
+           
+           vol_id_extract = Glob_vol_id_test_temp[where_tray_eq]
+           moth_id_extract = Glob_moth_id_test_temp[where_tray_eq]
+           Strip_id_extract = Glob_Strip_id_test_temp[where_tray_eq]
+           Si_id_extract = Glob_Si_id_test_temp[where_tray_eq]
+           tray_id_extract = Glob_tray_id_test_temp[where_tray_eq]
+           plane_id_extract = Glob_plane_id_test_temp[where_tray_eq]
+           pos_extract = Glob_pos_test_temp[where_tray_eq]
+           zpos_extract = Glob_zpos_test_temp[where_tray_eq]
+           energy_dep_extract = Glob_energy_dep_test_temp[where_tray_eq]
+           
+           where_Y = where(Si_id_extract EQ 1)
+           if (where_Y(0) NE -1) then begin
+             vol_id_intray = [vol_id_intray, vol_id_extract[where_Y]]
+             moth_id_intray = [moth_id_intray, moth_id_extract[where_Y]]
+             Strip_id_intray = [Strip_id_intray, Strip_id_extract[where_Y]]
+             Si_id_intray = [Si_id_intray, Si_id_extract[where_Y]]
+             tray_id_intray = [tray_id_intray, tray_id_extract[where_Y]]
+             plane_id_intray = [plane_id_intray, plane_id_extract[where_Y]]
+             pos_intray = [pos_intray, pos_extract[where_Y]]
+             zpos_intray = [zpos_intray, zpos_extract[where_Y]]
+             energy_dep_intray = [energy_dep_intray, energy_dep_extract[where_Y]]         
+           endif
+           where_X = where(Si_id_extract EQ 0)
+           if (where_X(0) NE -1) then begin
+             vol_id_intray = [vol_id_intray, vol_id_extract[where_X]]
+             moth_id_intray = [moth_id_intray, moth_id_extract[where_X]]
+             Strip_id_intray = [Strip_id_intray, Strip_id_extract[where_X]]
+             Si_id_intray = [Si_id_intray, Si_id_extract[where_X]]
+             tray_id_intray = [tray_id_intray, tray_id_extract[where_X]]
+             plane_id_intray = [plane_id_intray, plane_id_extract[where_X]]
+             pos_intray = [pos_intray, pos_extract[where_X]]
+             zpos_intray = [zpos_intray, zpos_extract[where_X]]
+             energy_dep_intray = [energy_dep_intray, energy_dep_extract[where_X]]         
+           endif
+         N_tray_eq = n_elements(where_tray_eq)
+         if where_tray_eq(N_tray_eq-1) LT (n_elements(Glob_tray_id_test_temp)-1) then begin
+          intray = where_tray_eq(N_tray_eq-1)+1
+         endif else break
+        endwhile
+        
+       
+        vol_id_temp = vol_id_intray[1:*]
+        moth_id_temp = moth_id_intray[1:*]
+        Strip_id_temp = Strip_id_intray[1:*]
+        Si_id_temp = Si_id_intray[1:*]
+        tray_id_temp = tray_id_intray[1:*]
+        plane_id_temp = plane_id_intray[1:*]
+        pos_temp = pos_intray[1:*]
+        zpos_temp = zpos_intray[1:*]
+        energy_dep_temp = energy_dep_intray[1:*]
+        
+        event_id_temp = lonarr(n_elements(vol_id_temp))
+        for k=0l, n_elements(vol_id_temp)-1 do begin
+         event_id_temp(k) = event_array(j)
+        endfor
+        
+        Glob_event_id_test = [Glob_event_id_test, event_id_temp]
+        Glob_vol_id_test = [Glob_vol_id_test, vol_id_temp]
+        Glob_moth_id_test= [Glob_moth_id_test, moth_id_temp] 
+        Glob_Strip_id_test = [Glob_Strip_id_test, Strip_id_temp]
+        Glob_Si_id_test = [Glob_Si_id_test, Si_id_temp]
+        Glob_tray_id_test = [Glob_tray_id_test, tray_id_temp]
+        Glob_plane_id_test = [Glob_plane_id_test, plane_id_temp]
+        Glob_pos_test = [Glob_pos_test, pos_temp]
+        Glob_zpos_test = [Glob_zpos_test, zpos_temp]
+        Glob_energy_dep_test = [Glob_energy_dep_test, energy_dep_temp]
+    
+    endfor
+    
+    Glob_event_id_test = Glob_event_id_test[1:*]
+    Glob_vol_id_test =  Glob_vol_id_test[1:*]
+    Glob_moth_id_test =  Glob_moth_id_test[1:*]
+    Glob_Strip_id_test =  Glob_Strip_id_test[1:*]
+    Glob_Si_id_test =  Glob_Si_id_test[1:*]
+    Glob_tray_id_test =  Glob_tray_id_test[1:*]
+    Glob_plane_id_test =  Glob_plane_id_test[1:*]
+    Glob_pos_test = Glob_pos_test[1:*]
+    Glob_zpos_test = Glob_zpos_test[1:*]
+    Glob_energy_dep_test = Glob_energy_dep_test[1:*]
+    
+    
+    ; Level 0 = energy summed
+    ; Level 0 = the events are sorted in tray, and Y before X within the same tray
+    ; energy threshold applied
+    
+    CREATE_STRUCT, L0TRACKERGLOBAL, 'GLOBALTRACKERL0', ['EVT_ID', 'VOLUME_ID', 'MOTHER_ID', 'TRAY_ID', 'PLANE_ID','TRK_FLAG', 'STRIP_ID', 'POS', 'ZPOS','E_DEP'], 'I,J,J,I,I,I,J,F20.5,F20.5,F20.5', DIMEN = N_ELEMENTS(Glob_event_id_test)
+    L0TRACKERGLOBAL.EVT_ID = Glob_event_id_test
+    L0TRACKERGLOBAL.VOLUME_ID = Glob_vol_id_test
+    L0TRACKERGLOBAL.MOTHER_ID = Glob_moth_id_test
+    L0TRACKERGLOBAL.TRAY_ID = Glob_tray_id_test
+    L0TRACKERGLOBAL.PLANE_ID = Glob_plane_id_test
+    L0TRACKERGLOBAL.TRK_FLAG = Glob_Si_id_test
+    L0TRACKERGLOBAL.STRIP_ID = Glob_Strip_id_test
+    L0TRACKERGLOBAL.POS = Glob_pos_test
+    L0TRACKERGLOBAL.ZPOS = Glob_zpos_test
+    L0TRACKERGLOBAL.E_DEP = Glob_energy_dep_test
+    
+    HDR_L0GLOBAL = ['Creator          = Valentina Fioretti', $
+              'THELSIM release  = ASTROGAM '+astrogam_version, $
+              'N_IN             = '+STRTRIM(STRING(N_IN),1)+'   /Number of simulated particles', $
+              'N_TRIG           = '+STRTRIM(STRING(N_TRIG),1)+'   /Number of triggering events', $
+              'ENERGY           = '+ene_type+'   /Simulated input energy', $
+              'THETA            = '+STRTRIM(STRING(THETA_TYPE),1)+'   /Simulated input theta angle', $
+              'PHI              = '+STRTRIM(STRING(PHI_TYPE),1)+'   /Simulated input phi angle', $
+              'ENERGY UNIT      = KEV']
+    
+    
+    MWRFITS, L0TRACKERGLOBAL, outdir+'/L0.ASTROGAM'+astrogam_version+'.'+py_name+'.'+sim_name+'.'+stripname+'.'+sname+'.'+STRMID(STRTRIM(STRING(N_IN),1),0,10)+part_type+'.'+ene_type+'MeV.'+STRMID(STRTRIM(STRING(THETA_TYPE),1),0,10)+'.'+STRMID(STRTRIM(STRING(PHI_TYPE),1),0,10)+'.'+strtrim(string(ifile),1)+'.fits', HDR_L0GLOBAL, /CREATE
+    
+	
+	
         
         print, '%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%'
         print, '                      Tracker   '
@@ -2495,6 +2729,7 @@ if (astrogam_version EQ 'V3.0') then begin
         Glob_zpos_y_top_cluster = -1.
         Glob_energy_dep_y_top_cluster = -1. 
         
+
         print, 'N_trig: ', N_trig 
            
         for k=0l, N_trig-1 do begin
@@ -2502,17 +2737,30 @@ if (astrogam_version EQ 'V3.0') then begin
          N_start = 0l
          j=0l
          while (1) do begin
-            where_tray_eq_x_top = where(Glob_tray_id_x_top(*, k) EQ Glob_tray_id_x_top(j, k))
+ 
+            ; sorting the planes
+            sort_ascending_plane_x = sort(Glob_plane_id_x_top(*, k))
+            Glob_vol_id_x_top_tray = Glob_vol_id_x_top[sort_ascending_plane_x, k]
+            Glob_moth_id_x_top_tray = Glob_moth_id_x_top[sort_ascending_plane_x, k]
+            Glob_Strip_id_x_top_tray = Glob_Strip_id_x_top[sort_ascending_plane_x, k]
+            Glob_Si_id_x_top_tray = Glob_Si_id_x_top[sort_ascending_plane_x, k]
+            Glob_tray_id_x_top_tray = Glob_tray_id_x_top[sort_ascending_plane_x, k]
+            Glob_plane_id_x_top_tray = Glob_plane_id_x_top[sort_ascending_plane_x, k]
+            Glob_xpos_x_top_tray = Glob_xpos_x_top[sort_ascending_plane_x, k]
+            Glob_zpos_x_top_tray = Glob_zpos_x_top[sort_ascending_plane_x, k]
+            Glob_energy_dep_x_top_tray = Glob_energy_dep_x_top[sort_ascending_plane_x, k]
             
-            Glob_vol_id_x_top_tray = Glob_vol_id_x_top[where_tray_eq_x_top, k]
-            Glob_moth_id_x_top_tray = Glob_moth_id_x_top[where_tray_eq_x_top, k]
-            Glob_Strip_id_x_top_tray = Glob_Strip_id_x_top[where_tray_eq_x_top, k]
-            Glob_Si_id_x_top_tray = Glob_Si_id_x_top[where_tray_eq_x_top, k]
-            Glob_tray_id_x_top_tray = Glob_tray_id_x_top[where_tray_eq_x_top, k]
-            Glob_plane_id_x_top_tray = Glob_plane_id_x_top[where_tray_eq_x_top, k]
-            Glob_xpos_x_top_tray = Glob_xpos_x_top[where_tray_eq_x_top, k]
-            Glob_zpos_x_top_tray = Glob_zpos_x_top[where_tray_eq_x_top, k]
-            Glob_energy_dep_x_top_tray = Glob_energy_dep_x_top[where_tray_eq_x_top, k]
+            where_tray_eq_x_top = where(Glob_tray_id_x_top_tray EQ Glob_tray_id_x_top_tray(j))
+            
+            Glob_vol_id_x_top_tray = Glob_vol_id_x_top_tray[where_tray_eq_x_top]
+            Glob_moth_id_x_top_tray = Glob_moth_id_x_top_tray[where_tray_eq_x_top]
+            Glob_Strip_id_x_top_tray = Glob_Strip_id_x_top_tray[where_tray_eq_x_top]
+            Glob_Si_id_x_top_tray = Glob_Si_id_x_top_tray[where_tray_eq_x_top]
+            Glob_tray_id_x_top_tray = Glob_tray_id_x_top_tray[where_tray_eq_x_top]
+            Glob_plane_id_x_top_tray = Glob_plane_id_x_top_tray[where_tray_eq_x_top]
+            Glob_xpos_x_top_tray = Glob_xpos_x_top_tray[where_tray_eq_x_top]
+            Glob_zpos_x_top_tray = Glob_zpos_x_top_tray[where_tray_eq_x_top]
+            Glob_energy_dep_x_top_tray = Glob_energy_dep_x_top_tray[where_tray_eq_x_top]
             
             where_layer_x_top = where((Glob_Si_id_x_top_tray EQ 0) and (Glob_energy_dep_x_top_tray GT 0.))
             ;print, k
@@ -2530,6 +2778,10 @@ if (astrogam_version EQ 'V3.0') then begin
 
               e_cluster_temp = Glob_energy_dep_x_top_tray(0)
               wx_cluster_temp = Glob_xpos_x_top_tray(0)*Glob_energy_dep_x_top_tray(0)
+              
+              ;print, 'k:', k
+              ;print, 'n of same strip: ', n_elements(Glob_Strip_id_x_top_tray)
+              
               if (n_elements(Glob_Strip_id_x_top_tray) EQ 1) then begin
                   Glob_event_id_x_top_cluster = [Glob_event_id_x_top_cluster, k]
                   Glob_Si_id_x_top_cluster = [Glob_Si_id_x_top_cluster, Glob_Si_id_x_top_tray]
@@ -2539,6 +2791,19 @@ if (astrogam_version EQ 'V3.0') then begin
                   Glob_energy_dep_x_top_cluster = [Glob_energy_dep_x_top_cluster, total(e_cluster_temp)]
                   Glob_xpos_x_top_cluster = [Glob_xpos_x_top_cluster, total(wx_cluster_temp)/total(e_cluster_temp)]         
               endif else begin
+               sort_strip_ascending = sort(Glob_Strip_id_x_top_tray)
+               Glob_vol_id_x_top_tray = Glob_vol_id_x_top_tray[sort_strip_ascending]
+               Glob_moth_id_x_top_tray = Glob_moth_id_x_top_tray[sort_strip_ascending]
+               Glob_Strip_id_x_top_tray = Glob_Strip_id_x_top_tray[sort_strip_ascending]
+               Glob_Si_id_x_top_tray = Glob_Si_id_x_top_tray[sort_strip_ascending]
+               Glob_tray_id_x_top_tray = Glob_tray_id_x_top_tray[sort_strip_ascending]
+               Glob_plane_id_x_top_tray = Glob_plane_id_x_top_tray[sort_strip_ascending]
+               Glob_xpos_x_top_tray = Glob_xpos_x_top_tray[sort_strip_ascending]
+               Glob_zpos_x_top_tray = Glob_zpos_x_top_tray[sort_strip_ascending]
+               Glob_energy_dep_x_top_tray = Glob_energy_dep_x_top_tray[sort_strip_ascending] 
+               ;print, 'plane: ', Glob_plane_id_x_top_tray(0)
+               ;print, 'pos: ', Glob_xpos_x_top_tray
+               ;print, 'energy: ',  Glob_energy_dep_x_top_tray
                for jc=0l, n_elements(Glob_Strip_id_x_top_tray) -2 do begin
                  if (Glob_Strip_id_x_top_tray(jc+1) EQ (Glob_Strip_id_x_top_tray(jc)+1)) then begin
                     e_cluster_temp = [e_cluster_temp, Glob_energy_dep_x_top_tray(jc+1)]
@@ -2552,15 +2817,15 @@ if (astrogam_version EQ 'V3.0') then begin
                              Glob_energy_dep_x_top_cluster = [Glob_energy_dep_x_top_cluster, total(e_cluster_temp)]
                              Glob_xpos_x_top_cluster = [Glob_xpos_x_top_cluster, total(wx_cluster_temp)/total(e_cluster_temp)]
                     endif             
-                    endif else begin
+                 endif else begin
                       Glob_event_id_x_top_cluster = [Glob_event_id_x_top_cluster, k]
                       Glob_Si_id_x_top_cluster = [Glob_Si_id_x_top_cluster, Glob_Si_id_x_top_tray(jc)]
                       Glob_tray_id_x_top_cluster = [Glob_tray_id_x_top_cluster, Glob_tray_id_x_top_tray(jc)]
                       Glob_plane_id_x_top_cluster = [Glob_plane_id_x_top_cluster, Glob_plane_id_x_top_tray(jc)]
                       Glob_zpos_x_top_cluster = [Glob_zpos_x_top_cluster, Glob_zpos_x_top_tray(jc)]
                       Glob_energy_dep_x_top_cluster = [Glob_energy_dep_x_top_cluster, total(e_cluster_temp)]
-                      e_cluster_temp = Glob_energy_dep_x_top_tray(jc+1)
                       Glob_xpos_x_top_cluster = [Glob_xpos_x_top_cluster, total(wx_cluster_temp)/total(e_cluster_temp)]
+                      e_cluster_temp = Glob_energy_dep_x_top_tray(jc+1)
                       wx_cluster_temp = Glob_xpos_x_top_tray(jc+1)*Glob_energy_dep_x_top_tray(jc+1)
                       if (jc EQ (n_elements(Glob_Strip_id_x_top_tray)-2)) then begin
                          Glob_event_id_x_top_cluster = [Glob_event_id_x_top_cluster, k]
@@ -2573,6 +2838,8 @@ if (astrogam_version EQ 'V3.0') then begin
                       endif
                   endelse
                endfor
+               ;print, 'Glob_xpos_x_top_cluster: ', Glob_xpos_x_top_cluster
+               ;print, 'Glob_energy_dep_x_top_cluster: ', Glob_energy_dep_x_top_cluster 
              endelse    
             endif
                
@@ -2598,19 +2865,34 @@ if (astrogam_version EQ 'V3.0') then begin
          N_start = 0l
          j=0l
          while (1) do begin
-            where_tray_eq_y_top = where(Glob_tray_id_y_top(*, k) EQ Glob_tray_id_y_top(j, k))
+ 
+            ; sorting the planes
+            sort_ascending_plane_y = sort(Glob_plane_id_y_top(*, k))
+            Glob_vol_id_y_top_tray = Glob_vol_id_y_top[sort_ascending_plane_y, k]
+            Glob_moth_id_y_top_tray = Glob_moth_id_y_top[sort_ascending_plane_y, k]
+            Glob_Strip_id_y_top_tray = Glob_Strip_id_y_top[sort_ascending_plane_y, k]
+            Glob_Si_id_y_top_tray = Glob_Si_id_y_top[sort_ascending_plane_y, k]
+            Glob_tray_id_y_top_tray = Glob_tray_id_y_top[sort_ascending_plane_y, k]
+            Glob_plane_id_y_top_tray = Glob_plane_id_y_top[sort_ascending_plane_y, k]
+            Glob_ypos_y_top_tray = Glob_ypos_y_top[sort_ascending_plane_y, k]
+            Glob_zpos_y_top_tray = Glob_zpos_y_top[sort_ascending_plane_y, k]
+            Glob_energy_dep_y_top_tray = Glob_energy_dep_y_top[sort_ascending_plane_y, k]
             
-            Glob_vol_id_y_top_tray = Glob_vol_id_y_top[where_tray_eq_y_top, k]
-            Glob_moth_id_y_top_tray = Glob_moth_id_y_top[where_tray_eq_y_top, k]
-            Glob_Strip_id_y_top_tray = Glob_Strip_id_y_top[where_tray_eq_y_top, k]
-            Glob_Si_id_y_top_tray = Glob_Si_id_y_top[where_tray_eq_y_top, k]
-            Glob_tray_id_y_top_tray = Glob_tray_id_y_top[where_tray_eq_y_top, k]
-            Glob_plane_id_y_top_tray = Glob_plane_id_y_top[where_tray_eq_y_top, k]
-            Glob_ypos_y_top_tray = Glob_ypos_y_top[where_tray_eq_y_top, k]
-            Glob_zpos_y_top_tray = Glob_zpos_y_top[where_tray_eq_y_top, k]
-            Glob_energy_dep_y_top_tray = Glob_energy_dep_y_top[where_tray_eq_y_top, k]
+            where_tray_eq_y_top = where(Glob_tray_id_y_top_tray EQ Glob_tray_id_y_top_tray(j))
+            
+            Glob_vol_id_y_top_tray = Glob_vol_id_y_top_tray[where_tray_eq_y_top]
+            Glob_moth_id_y_top_tray = Glob_moth_id_y_top_tray[where_tray_eq_y_top]
+            Glob_Strip_id_y_top_tray = Glob_Strip_id_y_top_tray[where_tray_eq_y_top]
+            Glob_Si_id_y_top_tray = Glob_Si_id_y_top_tray[where_tray_eq_y_top]
+            Glob_tray_id_y_top_tray = Glob_tray_id_y_top_tray[where_tray_eq_y_top]
+            Glob_plane_id_y_top_tray = Glob_plane_id_y_top_tray[where_tray_eq_y_top]
+            Glob_ypos_y_top_tray = Glob_ypos_y_top_tray[where_tray_eq_y_top]
+            Glob_zpos_y_top_tray = Glob_zpos_y_top_tray[where_tray_eq_y_top]
+            Glob_energy_dep_y_top_tray = Glob_energy_dep_y_top_tray[where_tray_eq_y_top]
             
             where_layer_y_top = where((Glob_Si_id_y_top_tray EQ 1) and (Glob_energy_dep_y_top_tray GT 0.))
+            ;print, k
+            ;print, where_layer_y_top
             if (where_layer_y_top(0) NE -1) then begin
               Glob_vol_id_y_top_tray = Glob_vol_id_y_top_tray[where_layer_y_top]
               Glob_moth_id_y_top_tray = Glob_moth_id_y_top_tray[where_layer_y_top]
@@ -2621,9 +2903,13 @@ if (astrogam_version EQ 'V3.0') then begin
               Glob_ypos_y_top_tray = Glob_ypos_y_top_tray[where_layer_y_top]
               Glob_zpos_y_top_tray = Glob_zpos_y_top_tray[where_layer_y_top]
               Glob_energy_dep_y_top_tray = Glob_energy_dep_y_top_tray[where_layer_y_top] 
-        
+
               e_cluster_temp = Glob_energy_dep_y_top_tray(0)
-              wy_cluster_temp = Glob_ypos_y_top_tray(0)*Glob_energy_dep_y_top_tray(0)
+              wx_cluster_temp = Glob_ypos_y_top_tray(0)*Glob_energy_dep_y_top_tray(0)
+              
+              ;print, 'k:', k
+              ;print, 'n of same strip: ', n_elements(Glob_Strip_id_y_top_tray)
+              
               if (n_elements(Glob_Strip_id_y_top_tray) EQ 1) then begin
                   Glob_event_id_y_top_cluster = [Glob_event_id_y_top_cluster, k]
                   Glob_Si_id_y_top_cluster = [Glob_Si_id_y_top_cluster, Glob_Si_id_y_top_tray]
@@ -2631,12 +2917,25 @@ if (astrogam_version EQ 'V3.0') then begin
                   Glob_plane_id_y_top_cluster = [Glob_plane_id_y_top_cluster, Glob_plane_id_y_top_tray]
                   Glob_zpos_y_top_cluster = [Glob_zpos_y_top_cluster, Glob_zpos_y_top_tray]
                   Glob_energy_dep_y_top_cluster = [Glob_energy_dep_y_top_cluster, total(e_cluster_temp)]
-                  Glob_ypos_y_top_cluster = [Glob_ypos_y_top_cluster, total(wy_cluster_temp)/total(e_cluster_temp)]         
-              endif else begin          
-              for jc=0l, n_elements(Glob_Strip_id_y_top_tray) -2 do begin
+                  Glob_ypos_y_top_cluster = [Glob_ypos_y_top_cluster, total(wx_cluster_temp)/total(e_cluster_temp)]         
+              endif else begin
+               sort_strip_ascending = sort(Glob_Strip_id_y_top_tray)
+               Glob_vol_id_y_top_tray = Glob_vol_id_y_top_tray[sort_strip_ascending]
+               Glob_moth_id_y_top_tray = Glob_moth_id_y_top_tray[sort_strip_ascending]
+               Glob_Strip_id_y_top_tray = Glob_Strip_id_y_top_tray[sort_strip_ascending]
+               Glob_Si_id_y_top_tray = Glob_Si_id_y_top_tray[sort_strip_ascending]
+               Glob_tray_id_y_top_tray = Glob_tray_id_y_top_tray[sort_strip_ascending]
+               Glob_plane_id_y_top_tray = Glob_plane_id_y_top_tray[sort_strip_ascending]
+               Glob_ypos_y_top_tray = Glob_ypos_y_top_tray[sort_strip_ascending]
+               Glob_zpos_y_top_tray = Glob_zpos_y_top_tray[sort_strip_ascending]
+               Glob_energy_dep_y_top_tray = Glob_energy_dep_y_top_tray[sort_strip_ascending] 
+               ;print, 'plane: ', Glob_plane_id_y_top_tray(0)
+               ;print, 'pos: ', Glob_ypos_y_top_tray
+               ;print, 'energy: ',  Glob_energy_dep_y_top_tray
+               for jc=0l, n_elements(Glob_Strip_id_y_top_tray) -2 do begin
                  if (Glob_Strip_id_y_top_tray(jc+1) EQ (Glob_Strip_id_y_top_tray(jc)+1)) then begin
                     e_cluster_temp = [e_cluster_temp, Glob_energy_dep_y_top_tray(jc+1)]
-                    wy_cluster_temp = [wy_cluster_temp, Glob_ypos_y_top_tray(jc + 1)*Glob_energy_dep_y_top_tray(jc+1)]
+                    wx_cluster_temp = [wx_cluster_temp, Glob_ypos_y_top_tray(jc + 1)*Glob_energy_dep_y_top_tray(jc+1)]
                     if (jc EQ (n_elements(Glob_Strip_id_y_top_tray)-2)) then begin
                              Glob_event_id_y_top_cluster = [Glob_event_id_y_top_cluster, k]
                              Glob_Si_id_y_top_cluster = [Glob_Si_id_y_top_cluster, Glob_Si_id_y_top_tray(jc)]
@@ -2644,18 +2943,18 @@ if (astrogam_version EQ 'V3.0') then begin
                              Glob_plane_id_y_top_cluster = [Glob_plane_id_y_top_cluster, Glob_plane_id_y_top_tray(jc)]
                              Glob_zpos_y_top_cluster = [Glob_zpos_y_top_cluster, Glob_zpos_y_top_tray(jc)]
                              Glob_energy_dep_y_top_cluster = [Glob_energy_dep_y_top_cluster, total(e_cluster_temp)]
-                             Glob_ypos_y_top_cluster = [Glob_ypos_y_top_cluster, total(wy_cluster_temp)/total(e_cluster_temp)]
+                             Glob_ypos_y_top_cluster = [Glob_ypos_y_top_cluster, total(wx_cluster_temp)/total(e_cluster_temp)]
                     endif             
-                    endif else begin
+                 endif else begin
                       Glob_event_id_y_top_cluster = [Glob_event_id_y_top_cluster, k]
                       Glob_Si_id_y_top_cluster = [Glob_Si_id_y_top_cluster, Glob_Si_id_y_top_tray(jc)]
                       Glob_tray_id_y_top_cluster = [Glob_tray_id_y_top_cluster, Glob_tray_id_y_top_tray(jc)]
                       Glob_plane_id_y_top_cluster = [Glob_plane_id_y_top_cluster, Glob_plane_id_y_top_tray(jc)]
                       Glob_zpos_y_top_cluster = [Glob_zpos_y_top_cluster, Glob_zpos_y_top_tray(jc)]
                       Glob_energy_dep_y_top_cluster = [Glob_energy_dep_y_top_cluster, total(e_cluster_temp)]
+                      Glob_ypos_y_top_cluster = [Glob_ypos_y_top_cluster, total(wx_cluster_temp)/total(e_cluster_temp)]
                       e_cluster_temp = Glob_energy_dep_y_top_tray(jc+1)
-                      Glob_ypos_y_top_cluster = [Glob_ypos_y_top_cluster, total(wy_cluster_temp)/total(e_cluster_temp)]
-                      wy_cluster_temp = Glob_ypos_y_top_tray(jc+1)*Glob_energy_dep_y_top_tray(jc+1)
+                      wx_cluster_temp = Glob_ypos_y_top_tray(jc+1)*Glob_energy_dep_y_top_tray(jc+1)
                       if (jc EQ (n_elements(Glob_Strip_id_y_top_tray)-2)) then begin
                          Glob_event_id_y_top_cluster = [Glob_event_id_y_top_cluster, k]
                          Glob_Si_id_y_top_cluster = [Glob_Si_id_y_top_cluster, Glob_Si_id_y_top_tray(jc+1)]
@@ -2667,12 +2966,14 @@ if (astrogam_version EQ 'V3.0') then begin
                       endif
                   endelse
                endfor
-              endelse      
+               ;print, 'Glob_ypos_y_top_cluster: ', Glob_ypos_y_top_cluster
+               ;print, 'Glob_energy_dep_y_top_cluster: ', Glob_energy_dep_y_top_cluster 
+             endelse    
             endif
                
-            N_tray_eq_x = n_elements(where_tray_eq_y_top)
-            if where_tray_eq_y_top(N_tray_eq_x-1) LT (n_elements(Glob_tray_id_y_top(*,k))-1) then begin
-              j = where_tray_eq_y_top(N_tray_eq_x-1)+1
+            N_tray_eq_y = n_elements(where_tray_eq_y_top)
+            if where_tray_eq_y_top(N_tray_eq_y-1) LT (n_elements(Glob_tray_id_y_top(*,k))-1) then begin
+              j = where_tray_eq_y_top(N_tray_eq_y-1)+1
             endif else break
          endwhile
         
@@ -2684,8 +2985,7 @@ if (astrogam_version EQ 'V3.0') then begin
         Glob_plane_id_y_top_cluster = Glob_plane_id_y_top_cluster[1:*] 
         Glob_ypos_y_top_cluster = Glob_ypos_y_top_cluster[1:*]
         Glob_zpos_y_top_cluster = Glob_zpos_y_top_cluster[1:*]
-        Glob_energy_dep_y_top_cluster = Glob_energy_dep_y_top_cluster[1:*] 
-    
+        Glob_energy_dep_y_top_cluster = Glob_energy_dep_y_top_cluster[1:*]     
 
         
         print, '%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%'
@@ -2859,7 +3159,8 @@ if (astrogam_version EQ 'V3.0') then begin
         max_arraydim_x = 0
         max_arraydim_y = 0
         
-        theta_kalman = fltarr(N_trig)
+        eventid_kalman = fltarr(N_trig)
+	theta_kalman = fltarr(N_trig)
         phi_kalman = fltarr(N_trig)
         energy_kalman = fltarr(N_trig)
         
@@ -2936,6 +3237,7 @@ if (astrogam_version EQ 'V3.0') then begin
                      while (1) do begin
                          where_si_eq = where(Si_id_temp_plane EQ Si_id_temp_plane(last))
                          
+			 
                          temp_samesi = pos_temp_plane(where_si_eq)
                          ; GAMS array 
                          if ((Si_id_temp_plane(last) EQ 2) or (Si_id_temp_plane(last) EQ 0)) then begin
@@ -2973,14 +3275,7 @@ if (astrogam_version EQ 'V3.0') then begin
                      endif else break
                 endwhile
     
-                for jcol = 0, n_elements(temp_planex) -1 do begin 
-                    plane_x_array[jcol, check_N_trig] = temp_planex[jcol]
-                    cluster_x_array[jcol, check_N_trig] = temp_clusterx[jcol]
-                endfor
-                for jcol = 0, n_elements(temp_planey) -1 do begin 
-                    plane_y_array[jcol, check_N_trig] = temp_planey[jcol]
-                    cluster_y_array[jcol, check_N_trig] = temp_clustery[jcol]
-                endfor
+
                 
                 
                 N_tray_eq = n_elements(where_tray_eq)
@@ -2988,8 +3283,18 @@ if (astrogam_version EQ 'V3.0') then begin
                   r = where_tray_eq(N_tray_eq-1)+1
                 endif else break      
             endwhile
+			 
+           for jcol = 0, n_elements(temp_planex) -1 do begin 
+                    plane_x_array[jcol, check_N_trig] = temp_planex[jcol]
+                    cluster_x_array[jcol, check_N_trig] = temp_clusterx[jcol]
+           endfor
+           for jcol = 0, n_elements(temp_planey) -1 do begin 
+                    plane_y_array[jcol, check_N_trig] = temp_planey[jcol]
+                    cluster_y_array[jcol, check_N_trig] = temp_clustery[jcol]
+            endfor
             
-            theta_kalman(check_N_trig) = theta_type
+            eventid_kalman(check_N_trig) = Glob_event_id_cluster(j)
+	    theta_kalman(check_N_trig) = theta_type
             phi_kalman(check_N_trig) = phi_type
             energy_kalman(check_N_trig) = ene_type
             
@@ -3014,9 +3319,10 @@ if (astrogam_version EQ 'V3.0') then begin
     ;    cluster_y_array = cluster_y_array[keepcols, *]
         
         string_dim = string(default_max_cols)    
-        CREATE_STRUCT, KALMANTRACKER, 'TRACKERKALMAN', ['Theta', 'Phi','Energia','Piani_X','Clusters_X', 'Piani_Y', 'Clusters_Y'], 'F,F,F,I('+string_dim+'),D('+string_dim+'),I('+string_dim+'),D('+string_dim+')', DIMEN = N_ELEMENTS(theta_kalman)
+        CREATE_STRUCT, KALMANTRACKER, 'TRACKERKALMAN', ['Event_ID', 'Theta', 'Phi','Energia','Piani_X','Clusters_X', 'Piani_Y','Clusters_Y'], 'J,F,F,F,I('+string_dim+'),D('+string_dim+'),I('+string_dim+'),D('+string_dim+')', DIMEN = N_ELEMENTS(theta_kalman)
     
-        KALMANTRACKER.Theta = float(theta_kalman)
+        KALMANTRACKER.Event_ID = float(eventid_kalman)
+	KALMANTRACKER.Theta = float(theta_kalman)
         KALMANTRACKER.Phi = float(phi_kalman)
         KALMANTRACKER.Energia = float(energy_kalman)
         KALMANTRACKER.Piani_X = plane_x_array
