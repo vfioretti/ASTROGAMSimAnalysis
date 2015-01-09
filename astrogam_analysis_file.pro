@@ -3529,11 +3529,13 @@ if (astrogam_version EQ 'V3.0') then begin
         
         for jp=0l, n_elements(theta_kalman)-1 do begin
               where_realx = where(plane_x_array(*, jp) GT 0)
-              n_planex = n_elements(plane_x_array(where_realx, jp))
+              planex_real = plane_x_array(where_realx, jp)
+              planex_uniq = planex_real(uniq(planex_real))
               where_realy = where(plane_y_array(*, jp) GT 0)
-              n_planey = n_elements(plane_y_array(where_realy, jp))
-              ;print, n_planex
-              ;print, n_planey
+              planey_real = plane_y_array(where_realy, jp)
+              planey_uniq = planey_real(uniq(planey_real))
+              n_planex = n_elements(planex_uniq)
+              n_planey = n_elements(planey_uniq)
               if ((n_planex GE 4) and (n_planey GE 4)) then begin
                   ;print, eventid_kalman(jp)
                   trigger_index = [trigger_index, jp]
