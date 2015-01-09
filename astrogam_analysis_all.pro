@@ -196,6 +196,17 @@ KALMAN_cluster_x = MAKE_ARRAY(default_max_cols, 1, /DOUBLE, VALUE = 0)
 KALMAN_plane_y = MAKE_ARRAY(default_max_cols, 1, /INTEGER, VALUE = 0)
 KALMAN_cluster_y = MAKE_ARRAY(default_max_cols, 1, /DOUBLE, VALUE = 0)
 
+; KALMAN.ASTROGAM<version>.<phys>List.<strip>.<point>.<n_in>ph.<energy>MeV.<theta>.<phi>.all.fits
+default_max_cols = 1000
+KALMANL1_eventid = float(-1l)
+KALMANL1_theta = float(-1l)
+KALMANL1_phi = float(-1l)
+KALMANL1_energy = float(-1l)
+KALMANL1_plane_x = MAKE_ARRAY(default_max_cols, 1, /INTEGER, VALUE = 0)
+KALMANL1_cluster_x = MAKE_ARRAY(default_max_cols, 1, /DOUBLE, VALUE = 0)
+KALMANL1_plane_y = MAKE_ARRAY(default_max_cols, 1, /INTEGER, VALUE = 0)
+KALMANL1_cluster_y = MAKE_ARRAY(default_max_cols, 1, /DOUBLE, VALUE = 0)
+
 ; SUM.ASTROGAM<version>.<phys>List.<strip>.<point>.<n_in>ph.<energy>MeV.<theta>.<phi>.all.fits
 SUMTRACKER_Glob_event_id_cluster = -1l
 SUMTRACKER_Glob_tray_id_cluster = -1l
@@ -525,12 +536,28 @@ for ifile=0, n_files-1 do begin
     KALMAN_theta = [KALMAN_theta, struct_kalman.Theta]
     KALMAN_phi = [KALMAN_phi, struct_kalman.Phi]
     KALMAN_energy = [KALMAN_energy, struct_kalman.ENERGIA]
-    ;for jev = 0l, n_elements(struct_kalman.Theta)-1 do begin
-      KALMAN_plane_x = [[KALMAN_plane_x], [struct_kalman.PIANI_X]]    
-      KALMAN_cluster_x = [[KALMAN_cluster_x], [struct_kalman.Clusters_X]]
-      KALMAN_plane_y = [[KALMAN_plane_y], [struct_kalman.PIANI_Y]]
-      KALMAN_cluster_y = [[KALMAN_cluster_y], [struct_kalman.Clusters_Y]]
-    ;endfor
+    KALMAN_plane_x = [[KALMAN_plane_x], [struct_kalman.PIANI_X]]    
+    KALMAN_cluster_x = [[KALMAN_cluster_x], [struct_kalman.Clusters_X]]
+    KALMAN_plane_y = [[KALMAN_plane_y], [struct_kalman.PIANI_Y]]
+    KALMAN_cluster_y = [[KALMAN_cluster_y], [struct_kalman.Clusters_Y]]
+
+    filenamefits_kalmanl1 = filepath+'KALMAN.L1.TRACKER.ASTROGAM'+astrogam_version+'.'+py_name+'.'+sim_name+'.'+stripname+'.'+sname+'.'+STRMID(STRTRIM(STRING(N_IN),1),0,10)+part_type+'.'+ene_type+'MeV.'+STRMID(STRTRIM(STRING(THETA_TYPE),1),0,10)+'.'+STRMID(STRTRIM(STRING(PHI_TYPE),1),0,10)+'.'+strtrim(string(ifile),1)+'.fits'   
+    print, filenamefits_kalmanl1
+    struct_kalmanl1 = mrdfits(filenamefits_kalmanl1,$ 
+                     1, $
+                     structyp = 'kalmanl1', $
+                     /unsigned)
+
+    print, struct_kalmanl1.Event_ID
+    KALMANL1_eventid = [KALMANL1_eventid, struct_kalmanl1.Event_ID]
+    KALMANL1_theta = [KALMANL1_theta, struct_kalmanl1.Theta]
+    KALMANL1_phi = [KALMANL1_phi, struct_kalmanl1.Phi]
+    KALMANL1_energy = [KALMANL1_energy, struct_kalmanl1.ENERGIA]
+    KALMANL1_plane_x = [[KALMANL1_plane_x], [struct_kalmanl1.PIANI_X]]    
+    KALMANL1_cluster_x = [[KALMANL1_cluster_x], [struct_kalmanl1.Clusters_X]]
+    KALMANL1_plane_y = [[KALMANL1_plane_y], [struct_kalmanl1.PIANI_Y]]
+    KALMANL1_cluster_y = [[KALMANL1_cluster_y], [struct_kalmanl1.Clusters_Y]]
+
     filenamefits_sum = filepath+'SUM.TRACKER.ASTROGAM'+astrogam_version+'.'+py_name+'.'+sim_name+'.'+stripname+'.'+sname+'.'+STRMID(STRTRIM(STRING(N_IN),1),0,10)+part_type+'.'+ene_type+'MeV.'+STRMID(STRTRIM(STRING(THETA_TYPE),1),0,10)+'.'+STRMID(STRTRIM(STRING(PHI_TYPE),1),0,10)+'.'+strtrim(string(ifile),1)+'.fits'   
     struct_sum = mrdfits(filenamefits_sum,$ 
                      1, $
@@ -952,6 +979,16 @@ KALMAN_cluster_x = KALMAN_cluster_x[*, 1:*]
 KALMAN_plane_y = KALMAN_plane_y[*, 1:*]
 KALMAN_cluster_y = KALMAN_cluster_y[*, 1:*]
 
+; KALMANL1.TRACKER.ASTROGAM<version>.<phys>List.<strip>.<point>.<n_in>ph.<energy>MeV.<theta>.<phi>.all.fits
+KALMANL1_eventid = KALMANL1_eventid[1:*]
+KALMANL1_theta = KALMANL1_theta[1:*]
+KALMANL1_phi = KALMANL1_phi[1:*]
+KALMANL1_energy = KALMANL1_energy[1:*]
+KALMANL1_plane_x = KALMANL1_plane_x[*, 1:*]  
+KALMANL1_cluster_x = KALMANL1_cluster_x[*, 1:*]
+KALMANL1_plane_y = KALMANL1_plane_y[*, 1:*]
+KALMANL1_cluster_y = KALMANL1_cluster_y[*, 1:*]
+
 ; SUM.ASTROGAM<version>.<phys>List.<strip>.<point>.<n_in>ph.<energy>MeV.<theta>.<phi>.all.fits
 SUMTRACKER_Glob_event_id_cluster = SUMTRACKER_Glob_event_id_cluster[1:*]
 SUMTRACKER_Glob_tray_id_cluster = SUMTRACKER_Glob_tray_id_cluster[1:*]
@@ -1083,7 +1120,6 @@ KALMANTRACKER.Clusters_X = KALMAN_cluster_x
 KALMANTRACKER.Piani_Y = KALMAN_plane_y
 KALMANTRACKER.Clusters_Y = KALMAN_cluster_y
 
-
 HDR_KALMAN = ['Creator          = Valentina Fioretti', $
           'THELSim release  = ASTROGAM '+astrogam_version, $
           'N_IN             = '+STRTRIM(STRING(N_IN),1)+'   /Number of simulated particles', $
@@ -1094,6 +1130,27 @@ HDR_KALMAN = ['Creator          = Valentina Fioretti', $
 
 MWRFITS, KALMANTRACKER, filepath+'KALMAN.TRACKER.ASTROGAM'+astrogam_version+'.'+py_name+'.'+sim_name+'.'+stripname+'.'+sname+'.'+STRMID(STRTRIM(STRING(N_IN),1),0,10)+part_type+'.'+ene_type+'MeV.'+STRMID(STRTRIM(STRING(THETA_TYPE),1),0,10)+'.'+STRMID(STRTRIM(STRING(PHI_TYPE),1),0,10)+'.all.fits', HDR_KALMAN, /CREATE
 
+
+string_dim = string(default_max_cols) 
+CREATE_STRUCT, KALMANTRIGGER, 'TRIGGERKALMAN', ['Event_ID', 'Theta', 'Phi','Energia','Piani_X','Clusters_X', 'Piani_Y', 'Clusters_Y'],'J,F,F,F,I('+string_dim+'),D('+string_dim+'),I('+string_dim+'),D('+string_dim+')', DIMEN = N_ELEMENTS(KALMANL1_theta)
+KALMANTRIGGER.Event_id = KALMANL1_eventid
+KALMANTRIGGER.Theta = KALMANL1_theta
+KALMANTRIGGER.Phi = KALMANL1_phi
+KALMANTRIGGER.Energia = KALMANL1_energy
+KALMANTRIGGER.Piani_X = KALMANL1_plane_x
+KALMANTRIGGER.Clusters_X = KALMANL1_cluster_x
+KALMANTRIGGER.Piani_Y = KALMANL1_plane_y
+KALMANTRIGGER.Clusters_Y = KALMANL1_cluster_y
+
+HDR_KALMANTRIGGER = ['Creator          = Valentina Fioretti', $
+          'THELSim release  = ASTROGAM '+astrogam_version, $
+          'N_IN             = '+STRTRIM(STRING(N_IN),1)+'   /Number of simulated particles', $
+          'ENERGY           = '+ene_type+'   /Simulated input energy', $
+          'THETA            = '+STRTRIM(STRING(THETA_TYPE),1)+'   /Simulated input theta angle', $
+          'PHI              = '+STRTRIM(STRING(PHI_TYPE),1)+'   /Simulated input phi angle']
+
+
+MWRFITS, KALMANTRIGGER, filepath+'KALMAN.L1.TRACKER.ASTROGAM'+astrogam_version+'.'+py_name+'.'+sim_name+'.'+stripname+'.'+sname+'.'+STRMID(STRTRIM(STRING(N_IN),1),0,10)+part_type+'.'+ene_type+'MeV.'+STRMID(STRTRIM(STRING(THETA_TYPE),1),0,10)+'.'+STRMID(STRTRIM(STRING(PHI_TYPE),1),0,10)+'.all.fits', HDR_KALMANTRIGGER, /CREATE
 
 
 CREATE_STRUCT, SUMTRACKER, 'TRACKERSUM', ['EVT_ID', 'TRAY_ID','PLANE_ID','TRK_FLAG','ZPOS','E_DEP'], 'J,I,I,I,F20.5,F20.5', DIMEN = N_ELEMENTS(SUMTRACKER_Glob_event_id_cluster)

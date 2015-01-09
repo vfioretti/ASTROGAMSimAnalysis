@@ -255,7 +255,8 @@ if (astrogam_version EQ 'V3.0') then begin
     N_plane = N_tray*1
     N_strip = 2480l
     tray_side = 60.016 ;cm
-
+    strip_side = Tray_side/N_strip
+    
     bar_side = 0.5  ; cm  (side of calorimeter bars)
     n_bars = 120*120  ; number of calorimeter bars
     
@@ -357,6 +358,7 @@ for ifile=0, n_fits-1 do begin
     
     ; Reading the tracker (events with E > 0)                
      if ((struct(k).VOLUME_ID GE tracker_bottom_vol_start) or (struct(k).MOTHER_ID GE tracker_bottom_vol_start)) then begin
+      ;if (struct(k).MOTHER_ID GE tracker_bottom_vol_start) then begin
       if (struct(k).E_DEP GT 0.d) then begin        
 
          event_id = [event_id, struct(k).EVT_ID] 
@@ -630,6 +632,16 @@ for ifile=0, n_fits-1 do begin
         for j=0l, n_elements(vol_id)-1 do begin
           if (isStrip EQ 1) then begin  ;--------> PIXEL = 1
             if (repli EQ 1) then begin ;--------> REPLI = 1 
+
+               ;Strip_id_x(j) = vol_id(j) mod N_strip
+               ;Strip_id_y(j) = vol_id(j)/N_strip
+               ;tray_id(j) = moth_id(j)/tracker_bottom_vol_start
+               ;invert_tray_id = (N_tray - tray_id(j))+1
+               ;plane_id(j) = invert_tray_id
+               
+               ;vol_id(j) = Strip_id_y(j)
+               ;moth_id(j) = moth_id(j) + Strip_id_x(j)
+               
                Strip_id_y(j) = vol_id(j)
                tray_id(j) = moth_id(j)/tracker_bottom_vol_start
                invert_tray_id = (N_tray - tray_id(j))+1
@@ -839,12 +851,156 @@ if (astrogam_version EQ 'V3.0') then begin
     
     MWRFITS, rawData, outdir+'/G4.RAW.ASTROGAM'+astrogam_version+'.'+py_name+'.'+sim_name+'.'+stripname+'.'+sname+'.'+strmid(strtrim(string(N_in),1),0,10)+part_type+'.'+ene_type+'MeV.'+strmid(strtrim(string(theta_type),1),0,10)+'.'+strmid(strtrim(string(phi_type),1),0,10)+'.'+strtrim(string(ifile),1)+'.fits', hdr_rawData, /create
     
+    ; Loading the LUT
+    filename_x_top = './conf/ARCH.XSTRIP.TOP.ASTROGAM'+astrogam_version+'.TRACKER.FITS'
+    filename_y_top = './conf/ARCH.YSTRIP.TOP.ASTROGAM'+astrogam_version+'.TRACKER.FITS'
+
+    struct_x_top = mrdfits(filename_x_top,$ 
+                           1, $
+                           structyp = 'astrogam_xtop', $
+                           /unsigned)
+    
+    struct_y_top = mrdfits(filename_y_top,$ 
+                           1, $
+                           structyp = 'astrogam_ytop', $
+                           /unsigned)
+    
+    Arch_vol_id_x_top = struct_x_top.VOLUME_ID
+    Arch_moth_id_x_top = struct_x_top.MOTHER_ID
+    Arch_Strip_id_x_top = struct_x_top.STRIP_ID 
+    Arch_Si_id_x_top = struct_x_top.TRK_FLAG
+    Arch_tray_id_x_top = struct_x_top.TRAY_ID 
+    Arch_plane_id_x_top = struct_x_top.PLANE_ID 
+    Arch_xpos_x_top = struct_x_top.XPOS 
+    Arch_zpos_x_top = struct_x_top.ZPOS 
+    Arch_energy_dep_x_top = struct_x_top.E_DEP 
+    
+    Arch_vol_id_y_top = struct_y_top.VOLUME_ID
+    Arch_moth_id_y_top = struct_y_top.MOTHER_ID
+    Arch_Strip_id_y_top = struct_y_top.STRIP_ID 
+    Arch_Si_id_y_top = struct_y_top.TRK_FLAG
+    Arch_tray_id_y_top = struct_y_top.TRAY_ID 
+    Arch_plane_id_y_top = struct_y_top.PLANE_ID 
+    Arch_ypos_y_top = struct_y_top.YPOS 
+    Arch_zpos_y_top = struct_y_top.ZPOS 
+    Arch_energy_dep_y_top = struct_y_top.E_DEP    
+                
+    ; Brutal patch for fixing the wrong volumes
+    start_tray = -(Tray_side/2.) + (strip_side/2.)
+    for jvol=0l, n_elements(event_id)-1 do begin
+           
+           ;print, 'event_id',  event_id(jvol)
+           ;print, 'tray',  tray_id(jvol)
+           where_tray_x = where(Arch_tray_id_x_top EQ tray_id(jvol))
+           where_tray_y = where(Arch_tray_id_y_top EQ tray_id(jvol))
+           temp_tray_x = Arch_tray_id_x_top(where_tray_x) 
+           temp_strip_x = Arch_Strip_id_x_top(where_tray_x)
+           temp_posx = Arch_xpos_x_top(where_tray_x)          
+           
+           ;where_same_x = where(((temp_posx+(strip_side/2.)) GT ent_x(jvol)) and ((temp_posx-(strip_side/2.)) LT ent_x(jvol)), /L64)
+           for jx=0l, n_elements(temp_posx)-1 do begin
+                   if (((temp_posx(jx)-(strip_side/2.)) LT ent_x(jvol)) and ((temp_posx(jx)+(strip_side/2.)) GT ent_x(jvol))) then begin
+                      where_same_x = jx
+                   endif 
+           endfor
+
+           temp_strip_x = temp_strip_x(where_same_x)
+           
+           ;print, 'ent_x(jvol)', ent_x(jvol)
+           ;print, 'temp_strip_x', temp_strip_x
+           ;print, 'Strip_id_x(jvol): ', Strip_id_x(jvol)
+           
+           if (temp_strip_x NE Strip_id_x(jvol)) then begin
+                    if (((Strip_id_x(jvol) - temp_strip_x) GT 1) or ((Strip_id_x(jvol) - temp_strip_x) LT (-1))) then begin
+                      ;print, 'Strip_id_x(jvol): ', Strip_id_x(jvol)
+                      Strip_id_x(jvol) = temp_strip_x
+                    endif
+           endif
+
+           ;print, 'Strip_id_x(jvol): ', Strip_id_x(jvol)
+           temp_tray_y = Arch_tray_id_y_top(where_tray_y) 
+           temp_strip_y = Arch_Strip_id_y_top(where_tray_y)
+           temp_posy = Arch_ypos_y_top(where_tray_y)          
+           
+           ;where_same_y = where(((temp_posy+(strip_side/2.)) GT ent_y(jvol)) and ((temp_posy-(strip_side/2.)) LT ent_y(jvol)), /L64)
+           for jy=0l, n_elements(temp_posy)-1 do begin
+                   if (((temp_posy(jy)-(strip_side/2.)) LT ent_y(jvol)) and ((temp_posy(jy)+(strip_side/2.)) GT ent_y(jvol))) then begin
+                      where_same_y = jy
+                   endif 
+           endfor
+
+           temp_strip_y = temp_strip_y(where_same_y)
+           ;print, 'ent_y(jvol)', ent_y(jvol)
+           ;print, 'temp_strip_y', temp_strip_y 
+           ;print, 'Strip_id_y(jvol)', Strip_id_y(jvol) 
+           
+           if (temp_strip_y NE Strip_id_y(jvol)) then begin
+                    ;print, 'Strip_id_y(jvol) - temp_strip_y', Strip_id_y(jvol) - temp_strip_y
+                    diff = abs(Strip_id_y(jvol) - temp_strip_y)
+                    if (diff GT 1) then begin
+                      ;print, 'Strip_id_y(jvol)', Strip_id_y(jvol)
+                      Strip_id_y(jvol) = temp_strip_y
+                    endif
+           endif
+           
+           ;print, 'Strip_id_y(jvol)', Strip_id_y(jvol)
+           vol_id(jvol) = Strip_id_y(jvol)
+           ;print, 'vol_id(jvol)', vol_id(jvol)
+           moth_id(jvol) = tray_id(jvol)*1000000 + 90000 + Strip_id_x(jvol)
+           ;print, 'moth_id(jvol)', moth_id(jvol)
+        endfor  
 
     print, '%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%'
     print, '                            Tracker   '
     print, '                  Summing the Tracker energy                '
     print, '%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%'
     
+        CREATE_STRUCT, rawData2, 'rawData2', ['EVT_ID', 'VOL_ID', 'MOTH_ID', 'TRAY_ID', 'PLANE_ID', 'STRIP_ID_X', 'STRIP_ID_Y', 'E_DEP', 'X_ENT', 'Y_ENT', 'Z_ENT', 'X_EXIT', 'Y_EXIT', 'Z_EXIT'], $
+    'I,I,J,I,I,I,I,F20.5,F20.5,F20.5,F20.5,F20.5,F20.5,F20.5', DIMEN = n_elements(event_id)
+    rawData2.EVT_ID = event_id
+    rawData2.VOL_ID = vol_id
+    rawData2.MOTH_ID = moth_id
+    rawData2.TRAY_ID = tray_id
+    rawData2.PLANE_ID = plane_id
+    rawData2.STRIP_ID_X = Strip_id_x
+    rawData2.STRIP_ID_Y = Strip_id_y
+    rawData2.E_DEP = energy_dep
+    rawData2.X_ENT = ent_x
+    rawData2.Y_ENT = ent_y
+    rawData2.Z_ENT = ent_z
+    rawData2.X_EXIT = exit_x
+    rawData.Y_EXIT = exit_y
+    rawData.Z_EXIT = exit_z
+    
+    
+    hdr_rawData2 = ['COMMENT  ASTROGAM '+astrogam_version+' Geant4 simulation', $
+                   'N_in     = '+strtrim(string(N_in),1), $
+                   'Energy     = '+ene_type, $
+                   'Theta     = '+strtrim(string(theta_type),1), $
+                   'Phi     = '+strtrim(string(phi_type),1), $
+                   'Position unit = cm', $
+                   'Energy unit = keV']
+    
+    MWRFITS, rawData2, outdir+'/G4.RAW2.ASTROGAM'+astrogam_version+'.'+py_name+'.'+sim_name+'.'+stripname+'.'+sname+'.'+strmid(strtrim(string(N_in),1),0,10)+part_type+'.'+ene_type+'MeV.'+strmid(strtrim(string(theta_type),1),0,10)+'.'+strmid(strtrim(string(phi_type),1),0,10)+'.'+strtrim(string(ifile),1)+'.fits', hdr_rawData2, /create
+    
+;    where_ev = where(event_id EQ 19)
+;    sel_ev = event_id(where_ev)
+;    sel_vol = vol_id(where_ev)
+;    sel_moth = moth_id(where_ev)
+;    sel_tray = tray_id(where_ev)
+;    sel_plane = plane_id(where_ev)
+;    sel_stripx = Strip_id_x(where_ev)
+;    sel_stripy = Strip_id_y(where_ev)
+;    for jev=0l, n_elements(sel_ev)-1 do begin
+;          print, 'sel_ev', sel_ev(jev)
+;          print, 'sel_vol', sel_vol(jev)
+;          print, 'sel_moth', sel_moth(jev)
+;          print, 'sel_tray', sel_tray(jev)
+;          print, 'sel_plane', sel_plane(jev)
+;          print, 'sel_stripx', sel_stripx(jev)
+;          print, 'sel_stripy', sel_stripy(jev)
+;
+;    endfor
     N_trig = 0l
     
     event_id_tot = -1l
@@ -881,6 +1037,13 @@ if (astrogam_version EQ 'V3.0') then begin
             tray_id_tot = [tray_id_tot, tray_id_temp(r)]
             plane_id_tot = [plane_id_tot, plane_id_temp(r)]
             energy_dep_tot = [energy_dep_tot, e_dep_temp]
+            
+;            print, 'event_id(j)', event_id(j)
+;            print, 'vol_id_temp(r)', vol_id_temp(r)
+;            print, 'moth_id_temp(r)', moth_id_temp(r)
+;            print, 'Strip_id_x_temp(r)', Strip_id_x_temp(r)
+;            print, 'Strip_id_y_temp(r)', Strip_id_y_temp(r)
+;            print, 'plane_id_temp(r)', plane_id_temp(r)
             
             if (where_other_vol(0) NE -1) then begin
               vol_id_temp = vol_id_temp(where_other_vol)
@@ -941,6 +1104,26 @@ if (astrogam_version EQ 'V3.0') then begin
         energy_dep_tot_temp[ev_index+1] = energy_dep_tot[jev]/2.
     endfor
 
+;    where_ev = where(event_id_tot_temp EQ 2)
+;    sel_ev = event_id_tot_temp(where_ev)
+;    sel_vol = vol_id_tot_temp(where_ev)
+;    sel_moth = moth_id_tot_temp(where_ev)
+;    sel_tray = tray_id_tot_temp(where_ev)
+;    sel_plane = plane_id_tot_temp(where_ev)
+;    sel_strip = Strip_id_tot_temp(where_ev)
+;    sel_si = Si_id_tot_temp(where_ev)
+;    sel_ene = energy_dep_tot_temp(where_ev)
+;    for jev=0l, n_elements(sel_ev)-1 do begin
+;          print, 'sel_ev', sel_ev(jev)
+;          print, 'sel_vol', sel_vol(jev)
+;          print, 'sel_moth', sel_moth(jev)
+;          print, 'sel_tray', sel_tray(jev)
+;          print, 'sel_plane', sel_plane(jev)
+;          print, 'sel_strip', sel_strip(jev)
+;          print, 'sel_si', sel_si(jev)
+;          print, 'sel_ene', sel_ene(jev)
+;
+;    endfor
     
     event_id_tot = -1l
     vol_id_tot = -1l
@@ -970,26 +1153,52 @@ if (astrogam_version EQ 'V3.0') then begin
         
          r = 0l
          while(1) do begin
-            where_vol_eq = where(((vol_id_temp EQ vol_id_temp(r)) and (moth_id_temp EQ moth_id_temp(r))), complement = where_other_vol)
-            e_dep_temp = total(energy_dep_temp(where_vol_eq))           
-            event_id_tot = [event_id_tot, event_id_tot_temp(j)]
-            vol_id_tot = [vol_id_tot, vol_id_temp(r)]
-            moth_id_tot = [moth_id_tot, moth_id_temp(r)]
-            Strip_id_tot = [Strip_id_tot, Strip_id_temp(r)]
-            Si_id_tot = [Si_id_tot, Si_id_temp(r)]
-            tray_id_tot = [tray_id_tot, tray_id_temp(r)]
-            plane_id_tot = [plane_id_tot, plane_id_temp(r)]
-            energy_dep_tot = [energy_dep_tot, e_dep_temp]
             
-            if (where_other_vol(0) NE -1) then begin
-              vol_id_temp = vol_id_temp(where_other_vol)
-              moth_id_temp = moth_id_temp(where_other_vol)
-              Strip_id_temp = Strip_id_temp(where_other_vol)
-              Si_id_temp = Si_id_temp(where_other_vol)
-              tray_id_temp = tray_id_temp(where_other_vol)
-              plane_id_temp = plane_id_temp(where_other_vol)
-              energy_dep_temp = energy_dep_temp(where_other_vol)
-            endif else break
+            where_vol_eq = where(((vol_id_temp EQ vol_id_temp(r)) and (moth_id_temp EQ moth_id_temp(r)) and (Si_id_temp EQ 0)), complement = where_other_vol)
+            if (where_vol_eq(0) NE -1) then begin
+                e_dep_temp = total(energy_dep_temp(where_vol_eq))           
+                event_id_tot = [event_id_tot, event_id_tot_temp(j)]
+                vol_id_tot = [vol_id_tot, vol_id_temp(r)]
+                moth_id_tot = [moth_id_tot, moth_id_temp(r)]
+                Strip_id_tot = [Strip_id_tot, Strip_id_temp(r)]
+                Si_id_tot = [Si_id_tot, 0]
+                tray_id_tot = [tray_id_tot, tray_id_temp(r)]
+                plane_id_tot = [plane_id_tot, plane_id_temp(r)]
+                energy_dep_tot = [energy_dep_tot, e_dep_temp]
+                
+                if (where_other_vol(0) NE -1) then begin
+                  vol_id_temp = vol_id_temp(where_other_vol)
+                  moth_id_temp = moth_id_temp(where_other_vol)
+                  Strip_id_temp = Strip_id_temp(where_other_vol)
+                  Si_id_temp = Si_id_temp(where_other_vol)
+                  tray_id_temp = tray_id_temp(where_other_vol)
+                  plane_id_temp = plane_id_temp(where_other_vol)
+                  energy_dep_temp = energy_dep_temp(where_other_vol)
+                endif else break
+            endif
+
+            where_vol_eq = where(((vol_id_temp EQ vol_id_temp(r)) and (moth_id_temp EQ moth_id_temp(r)) and (Si_id_temp EQ 1)), complement = where_other_vol)
+            if (where_vol_eq(0) NE -1) then begin
+                e_dep_temp = total(energy_dep_temp(where_vol_eq))           
+                event_id_tot = [event_id_tot, event_id_tot_temp(j)]
+                vol_id_tot = [vol_id_tot, vol_id_temp(r)]
+                moth_id_tot = [moth_id_tot, moth_id_temp(r)]
+                Strip_id_tot = [Strip_id_tot, Strip_id_temp(r)]
+                Si_id_tot = [Si_id_tot, 1]
+                tray_id_tot = [tray_id_tot, tray_id_temp(r)]
+                plane_id_tot = [plane_id_tot, plane_id_temp(r)]
+                energy_dep_tot = [energy_dep_tot, e_dep_temp]
+                
+                if (where_other_vol(0) NE -1) then begin
+                  vol_id_temp = vol_id_temp(where_other_vol)
+                  moth_id_temp = moth_id_temp(where_other_vol)
+                  Strip_id_temp = Strip_id_temp(where_other_vol)
+                  Si_id_temp = Si_id_temp(where_other_vol)
+                  tray_id_temp = tray_id_temp(where_other_vol)
+                  plane_id_temp = plane_id_temp(where_other_vol)
+                  energy_dep_temp = energy_dep_temp(where_other_vol)
+                endif else break
+             endif
          endwhile
         
          N_event_eq = n_elements(where_event_eq)
@@ -2352,6 +2561,7 @@ endif
 endif
 if (astrogam_version EQ 'V3.0') then begin
       
+         
         ; Total number of strips
         Total_vol_x_top = (N_tray)*N_strip
         Total_vol_y_top = (N_tray)*N_strip
@@ -2379,39 +2589,7 @@ if (astrogam_version EQ 'V3.0') then begin
         Glob_ypos_y_top = dblarr(Total_vol_y_top, N_trig) 
         Glob_zpos_y_top = dblarr(Total_vol_y_top, N_trig) 
         Glob_energy_dep_y_top = dblarr(Total_vol_y_top, N_trig) 
-
-        filename_x_top = './conf/ARCH.XSTRIP.TOP.ASTROGAM'+astrogam_version+'.TRACKER.FITS'
-        filename_y_top = './conf/ARCH.YSTRIP.TOP.ASTROGAM'+astrogam_version+'.TRACKER.FITS'
-    
-        struct_x_top = mrdfits(filename_x_top,$ 
-                               1, $
-                               structyp = 'astrogam_xtop', $
-                               /unsigned)
-        
-        struct_y_top = mrdfits(filename_y_top,$ 
-                               1, $
-                               structyp = 'astrogam_ytop', $
-                               /unsigned)
-        
-        Arch_vol_id_x_top = struct_x_top.VOLUME_ID
-        Arch_moth_id_x_top = struct_x_top.MOTHER_ID
-        Arch_Strip_id_x_top = struct_x_top.STRIP_ID 
-        Arch_Si_id_x_top = struct_x_top.TRK_FLAG
-        Arch_tray_id_x_top = struct_x_top.TRAY_ID 
-        Arch_plane_id_x_top = struct_x_top.PLANE_ID 
-        Arch_xpos_x_top = struct_x_top.XPOS 
-        Arch_zpos_x_top = struct_x_top.ZPOS 
-        Arch_energy_dep_x_top = struct_x_top.E_DEP 
-        
-        Arch_vol_id_y_top = struct_y_top.VOLUME_ID
-        Arch_moth_id_y_top = struct_y_top.MOTHER_ID
-        Arch_Strip_id_y_top = struct_y_top.STRIP_ID 
-        Arch_Si_id_y_top = struct_y_top.TRK_FLAG
-        Arch_tray_id_y_top = struct_y_top.TRAY_ID 
-        Arch_plane_id_y_top = struct_y_top.PLANE_ID 
-        Arch_ypos_y_top = struct_y_top.YPOS 
-        Arch_zpos_y_top = struct_y_top.ZPOS 
-        Arch_energy_dep_y_top = struct_y_top.E_DEP    
+                 
         
         for i=0, N_trig-1 do begin
     
@@ -2461,7 +2639,9 @@ if (astrogam_version EQ 'V3.0') then begin
             tray_id_temp = tray_id_temp[vol_sort_arr]
             plane_id_temp = plane_id_temp[vol_sort_arr]
             energy_dep_temp = energy_dep_temp[vol_sort_arr]
-  
+
+            ;print, 'vol_id_temp', vol_id_temp
+            ;print, 'moth_id_temp', moth_id_temp
             for z=0l, Total_vol_x_top -1 do begin
               where_hit_x_top = where((Si_id_temp EQ 0) and (vol_id_temp EQ Glob_vol_id_x_top(z, N_ev)) and (moth_id_temp EQ Glob_moth_id_x_top(z, N_ev)))
               ;print, event_id_tot(j)
@@ -3160,7 +3340,7 @@ if (astrogam_version EQ 'V3.0') then begin
         max_arraydim_y = 0
         
         eventid_kalman = fltarr(N_trig)
-	theta_kalman = fltarr(N_trig)
+	      theta_kalman = fltarr(N_trig)
         phi_kalman = fltarr(N_trig)
         energy_kalman = fltarr(N_trig)
         
@@ -3311,7 +3491,10 @@ if (astrogam_version EQ 'V3.0') then begin
         if (max_arraydim_y GT max_arraydim_x) then max_cols = max_arraydim_y
     
         print, 'Max number of cols: ', max_cols
-    
+        if (max_cols GT default_max_cols) then begin
+          print, '!!!!!!!!!!!!!!!!!!!!!!! Number of columns exceeding the default !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!'
+          break
+        endif
     ;    keepcols = indgen(max_cols)    
     ;    plane_x_array = plane_x_array[keepcols, *]
     ;    cluster_x_array = cluster_x_array[keepcols, *]    
@@ -3322,7 +3505,7 @@ if (astrogam_version EQ 'V3.0') then begin
         CREATE_STRUCT, KALMANTRACKER, 'TRACKERKALMAN', ['Event_ID', 'Theta', 'Phi','Energia','Piani_X','Clusters_X', 'Piani_Y','Clusters_Y'], 'J,F,F,F,I('+string_dim+'),D('+string_dim+'),I('+string_dim+'),D('+string_dim+')', DIMEN = N_ELEMENTS(theta_kalman)
     
         KALMANTRACKER.Event_ID = float(eventid_kalman)
-	KALMANTRACKER.Theta = float(theta_kalman)
+	      KALMANTRACKER.Theta = float(theta_kalman)
         KALMANTRACKER.Phi = float(phi_kalman)
         KALMANTRACKER.Energia = float(energy_kalman)
         KALMANTRACKER.Piani_X = plane_x_array
@@ -3342,6 +3525,57 @@ if (astrogam_version EQ 'V3.0') then begin
         
         MWRFITS, KALMANTRACKER, outdir+'/KALMAN.TRACKER.ASTROGAM'+astrogam_version+'.'+py_name+'.'+sim_name+'.'+stripname+'.'+sname+'.'+STRMID(STRTRIM(STRING(N_IN),1),0,10)+part_type+'.'+ene_type+'MeV.'+STRMID(STRTRIM(STRING(THETA_TYPE),1),0,10)+'.'+STRMID(STRTRIM(STRING(PHI_TYPE),1),0,10)+'.'+strtrim(string(ifile),1)+'.fits', HDR_KALMAN, /CREATE
         
+        trigger_index = -1
+        
+        for jp=0l, n_elements(theta_kalman)-1 do begin
+              where_realx = where(plane_x_array(*, jp) GT 0)
+              n_planex = n_elements(plane_x_array(where_realx, jp))
+              where_realy = where(plane_y_array(*, jp) GT 0)
+              n_planey = n_elements(plane_y_array(where_realy, jp))
+              ;print, n_planex
+              ;print, n_planey
+              if ((n_planex GE 4) and (n_planey GE 4)) then begin
+                  ;print, eventid_kalman(jp)
+                  trigger_index = [trigger_index, jp]
+              endif
+        endfor
+        
+        if (N_elements(trigger_index) GT 1) then begin
+           trigger_index = trigger_index[1:*]
+           
+           eventid_kalman_trigger = eventid_kalman(trigger_index)
+           theta_kalman_trigger = theta_kalman(trigger_index)
+           phi_kalman_trigger = phi_kalman(trigger_index)
+           energy_kalman_trigger = energy_kalman(trigger_index)
+           cluster_x_array_trigger = cluster_x_array(*, trigger_index)
+           cluster_y_array_trigger = cluster_y_array(*, trigger_index)
+           plane_x_array_trigger = plane_x_array(*, trigger_index)
+           plane_y_array_trigger = plane_y_array(*, trigger_index)
+           
+        endif
+        
+        CREATE_STRUCT, KALMANTRIGGER, 'TRIGGERKALMAN', ['Event_ID', 'Theta', 'Phi','Energia','Piani_X','Clusters_X', 'Piani_Y','Clusters_Y'], 'J,F,F,F,I('+string_dim+'),D('+string_dim+'),I('+string_dim+'),D('+string_dim+')', DIMEN = N_ELEMENTS(theta_kalman_trigger)
+    
+        KALMANTRIGGER.Event_ID = float(eventid_kalman_trigger)
+        KALMANTRIGGER.Theta = float(theta_kalman_trigger)
+        KALMANTRIGGER.Phi = float(phi_kalman_trigger)
+        KALMANTRIGGER.Energia = float(energy_kalman_trigger)
+        KALMANTRIGGER.Piani_X = plane_x_array_trigger
+        KALMANTRIGGER.Clusters_X = cluster_x_array_trigger
+        KALMANTRIGGER.Piani_Y = plane_y_array_trigger
+        KALMANTRIGGER.Clusters_Y = cluster_y_array_trigger
+       
+             
+        HDR_KALMANTRIGGER = ['Creator          = Valentina Fioretti (INAF/IASF Bologna)', $
+                  'THELSIM release  = ASTROGAM '+astrogam_version, $
+                  'N_IN             = '+STRTRIM(STRING(N_IN),1)+'   /Number of simulated particles', $
+                  'N_TRIG           = '+STRTRIM(STRING(N_TRIG),1)+'   /Number of triggering events', $
+                  'ENERGY           = '+ene_type+'   /Simulated input energy', $
+                  'THETA            = '+STRTRIM(STRING(THETA_TYPE),1)+'   /Simulated input theta angle', $
+                  'PHI              = '+STRTRIM(STRING(PHI_TYPE),1)+'   /Simulated input phi angle']
+        
+        
+        MWRFITS, KALMANTRIGGER, outdir+'/KALMAN.L1.TRACKER.ASTROGAM'+astrogam_version+'.'+py_name+'.'+sim_name+'.'+stripname+'.'+sname+'.'+STRMID(STRTRIM(STRING(N_IN),1),0,10)+part_type+'.'+ene_type+'MeV.'+STRMID(STRTRIM(STRING(THETA_TYPE),1),0,10)+'.'+STRMID(STRTRIM(STRING(PHI_TYPE),1),0,10)+'.'+strtrim(string(ifile),1)+'.fits', HDR_KALMANTRIGGER, /CREATE
         
         Glob_event_id_sum = Glob_event_id_sum[1:*]
         Glob_Si_id_sum =  Glob_Si_id_sum[1:*]
