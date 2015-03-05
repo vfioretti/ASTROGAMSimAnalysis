@@ -52,9 +52,12 @@ phi_type = 0
 source_g = 0
 ene_min = 0
 ene_max = 0
+cal_flag = 0
+passive_flag = 0
+energy_thresh = 0
 
 read, astrogam_version, PROMPT='% - Enter ASTROGAM release (e.g. V1.4):'
-read, sim_type, PROMPT='% - Enter simulation type [0 = Mono, 1 = Chen, 2: Vela, 3: Crab, 4: G400]:'
+read, sim_type, PROMPT='% - Enter simulation type [0 = Mono, 1 = Range, 2 = Chen, 3: Vela, 4: Crab, 4: G400]:'
 read, n_files, PROMPT='% - Enter number of input files:'
 read, py_list, PROMPT='% - Enter the Physics List [0 = QGSP_BERT_EMV, 100 = ARGO, 300 = FERMI, 400 = ASTROMEV]:'
 read, N_in, PROMPT='% - Enter the number of emitted photons:'
@@ -95,15 +98,18 @@ if (sim_type EQ 0) then begin
    sim_name = 'MONO'
 endif
 if (sim_type EQ 1) then begin
-   sim_name = 'CHEN'
+  sim_name = 'RANGE'
 endif
 if (sim_type EQ 2) then begin
-   sim_name = 'VELA'
+   sim_name = 'CHEN'
 endif
 if (sim_type EQ 3) then begin
-   sim_name = 'CRAB'
+   sim_name = 'VELA'
 endif
 if (sim_type EQ 4) then begin
+   sim_name = 'CRAB'
+endif
+if (sim_type EQ 5) then begin
    sim_name = 'G410'
 endif
 
@@ -118,6 +124,15 @@ endif
 
 read, isStrip, PROMPT='% - Strip/Pixels activated?:'
 read, repli, PROMPT='% - Strips/Pixels replicated?:'
+read, cal_flag, PROMPT='% - Is Cal present? [0 = false, 1 = true]:'
+if (cal_flag EQ 0) then dir_cal = '/OnlyTracker'
+if (cal_flag EQ 1) then dir_cal = ''
+
+read, passive_flag, PROMPT='% - Is Passive present? [0 = false, 1 = true]:'
+if (passive_flag EQ 0) then dir_passive = ''
+if (passive_flag EQ 1) then dir_passive = '/WithPassive'
+
+read, energy_thresh, PROMPT='% - Enter energy threshold [keV]:'
 
 if (astrogam_version EQ 'V1.0') then begin
     if (isStrip EQ 0) then stripDir = 'NoStrip/'
@@ -372,7 +387,7 @@ gams_ac_panel = ''
 gams_ac_subpanel = -1l
 gams_ac_edep = -1.
 
-filepath = './ASTROGAM'+astrogam_version+sdir+'/theta'+strtrim(string(theta_type),1)+'/'+stripDir+py_dir+'/'+sim_name+'/'+ene_type+'MeV/'+strtrim(string(N_in),1)+part_type+'/'
+filepath = './ASTROGAM'+astrogam_version+sdir+'/theta'+strtrim(string(theta_type),1)+'/'+stripDir+py_dir+'/'+sim_name+'/'+ene_type+'MeV/'+strtrim(string(N_in),1)+part_type+dir_cal+dir_passive+'/'+strtrim(string(energy_thresh),1)+'keV/'
 print, 'LEVEL0 file path: ', filepath
 
 for ifile=0, n_files-1 do begin
@@ -571,28 +586,28 @@ for ifile=0, n_files-1 do begin
     SUMTRACKER_Glob_zpos_cluster = [SUMTRACKER_Glob_zpos_cluster, struct_SUM.ZPOS]
     SUMTRACKER_Glob_energy_dep_cluster = [SUMTRACKER_Glob_energy_dep_cluster, struct_SUM.E_DEP]
 
-
-    filenamefits_cal = filepath+'G4.CAL.ASTROGAM'+astrogam_version+'.'+py_name+'.'+sim_name+'.'+stripname+'.'+sname+'.'+strmid(strtrim(string(N_in),1),0,10)+part_type+'.'+ene_type+'MeV.'+strmid(strtrim(string(theta_type),1),0,10)+'.'+strmid(strtrim(string(phi_type),1),0,10)+'.'+strtrim(string(ifile),1)+'.fits'   
-    print, filenamefits_cal
-    struct_cal = mrdfits(filenamefits_cal,$ 
-                     1, $
-                     structyp = 'cal', $
-                     /unsigned)
-
-    calInput_event_id_tot_cal = [calInput_event_id_tot_cal, struct_cal.EVT_ID]
-    calInput_bar_id_tot = [calInput_bar_id_tot, struct_cal.BAR_ID]
-    calInput_bar_ene_tot = [calInput_bar_ene_tot, struct_cal.BAR_ENERGY]
- 
- 
-    filenamefits_cal_sum = filepath+'SUM.CAL.ASTROGAM'+astrogam_version+'.'+py_name+'.'+sim_name+'.'+stripname+'.'+sname+'.'+strmid(strtrim(string(N_in),1),0,10)+part_type+'.'+ene_type+'MeV.'+strmid(strtrim(string(theta_type),1),0,10)+'.'+strmid(strtrim(string(phi_type),1),0,10)+'.'+strtrim(string(ifile),1)+'.fits'   
-    struct_calsum = mrdfits(filenamefits_cal_sum,$ 
-                     1, $
-                     structyp = 'calsum', $
-                     /unsigned)
-
-    calInputSum_event_id_tot_cal = [calInput_event_id_tot_cal, struct_calsum.EVT_ID]
-    calInputSum_bar_ene_tot = [calInput_bar_ene_tot, struct_calsum.BAR_ENERGY]
-       
+    if (cal_flag EQ 1) then begin
+      filenamefits_cal = filepath+'G4.CAL.ASTROGAM'+astrogam_version+'.'+py_name+'.'+sim_name+'.'+stripname+'.'+sname+'.'+strmid(strtrim(string(N_in),1),0,10)+part_type+'.'+ene_type+'MeV.'+strmid(strtrim(string(theta_type),1),0,10)+'.'+strmid(strtrim(string(phi_type),1),0,10)+'.'+strtrim(string(ifile),1)+'.fits'   
+      print, filenamefits_cal
+      struct_cal = mrdfits(filenamefits_cal,$ 
+                       1, $
+                       structyp = 'cal', $
+                       /unsigned)
+  
+      calInput_event_id_tot_cal = [calInput_event_id_tot_cal, struct_cal.EVT_ID]
+      calInput_bar_id_tot = [calInput_bar_id_tot, struct_cal.BAR_ID]
+      calInput_bar_ene_tot = [calInput_bar_ene_tot, struct_cal.BAR_ENERGY]
+   
+   
+      filenamefits_cal_sum = filepath+'SUM.CAL.ASTROGAM'+astrogam_version+'.'+py_name+'.'+sim_name+'.'+stripname+'.'+sname+'.'+strmid(strtrim(string(N_in),1),0,10)+part_type+'.'+ene_type+'MeV.'+strmid(strtrim(string(theta_type),1),0,10)+'.'+strmid(strtrim(string(phi_type),1),0,10)+'.'+strtrim(string(ifile),1)+'.fits'   
+      struct_calsum = mrdfits(filenamefits_cal_sum,$ 
+                       1, $
+                       structyp = 'calsum', $
+                       /unsigned)
+  
+      calInputSum_event_id_tot_cal = [calInput_event_id_tot_cal, struct_calsum.EVT_ID]
+      calInputSum_bar_ene_tot = [calInput_bar_ene_tot, struct_calsum.BAR_ENERGY]
+    endif     
 ;    filenamefits_ac = filepath+'G4.AC.AGILE'+astrogam_version+'.'+py_name+'.'+sim_name+'.'+stripname+'.'+sname+'.'+strmid(strtrim(string(N_in),1),0,10)+'ph.'+ene_type+'MeV.'+strmid(strtrim(string(theta_type),1),0,10)+'.'+strmid(strtrim(string(phi_type),1),0,10)+'.'+strtrim(string(ifile),1)+'.fits'   
 ;    struct_ac = mrdfits(filenamefits_ac,$ 
 ;                     1, $
@@ -997,15 +1012,16 @@ SUMTRACKER_Glob_Si_id_cluster = SUMTRACKER_Glob_Si_id_cluster[1:*]
 SUMTRACKER_Glob_zpos_cluster = SUMTRACKER_Glob_zpos_cluster[1:*]
 SUMTRACKER_Glob_energy_dep_cluster = SUMTRACKER_Glob_energy_dep_cluster[1:*]
 
-; G4.CAL.ASTROGAM<version>.<phys>List.<strip>.<point>.<n_in>ph.<energy>MeV.<theta>.<phi>.all.fits 
-calInput_event_id_tot_cal = calInput_event_id_tot_cal[1:*]
-calInput_bar_id_tot = calInput_bar_id_tot[1:*]
-calInput_bar_ene_tot = calInput_bar_ene_tot[1:*]
-
-; SUM.CAL.ASTROGAM<version>.<phys>List.<strip>.<point>.<n_in>ph.<energy>MeV.<theta>.<phi>.all.fits 
-calInputSum_event_id_tot_cal = calInputSum_event_id_tot_cal[1:*]
-calInputSum_bar_ene_tot = calInputSum_bar_ene_tot[1:*]
-
+if (cal_flag EQ 1) then begin
+  ; G4.CAL.ASTROGAM<version>.<phys>List.<strip>.<point>.<n_in>ph.<energy>MeV.<theta>.<phi>.all.fits 
+  calInput_event_id_tot_cal = calInput_event_id_tot_cal[1:*]
+  calInput_bar_id_tot = calInput_bar_id_tot[1:*]
+  calInput_bar_ene_tot = calInput_bar_ene_tot[1:*]
+  
+  ; SUM.CAL.ASTROGAM<version>.<phys>List.<strip>.<point>.<n_in>ph.<energy>MeV.<theta>.<phi>.all.fits 
+  calInputSum_event_id_tot_cal = calInputSum_event_id_tot_cal[1:*]
+  calInputSum_bar_ene_tot = calInputSum_bar_ene_tot[1:*]
+endif
 ; G4.AC.AGILE<version>.<phys>List.<strip>.<point>.<n_in>ph.<energy>MeV.<theta>.<phi>.all.fits
 ;acInput_event_id_tot_ac = acInput_event_id_tot_ac[1:*]
 ;acInput_AC_panel = acInput_AC_panel[1:*]
@@ -1172,37 +1188,39 @@ HDR_SUM = ['Creator          = Valentina Fioretti', $
 
 MWRFITS, SUMTRACKER, filepath+'SUM.TRACKER.ASTROGAM'+astrogam_version+'.'+py_name+'.'+sim_name+'.'+stripname+'.'+sname+'.'+STRMID(STRTRIM(STRING(N_IN),1),0,10)+part_type+'.'+ene_type+'MeV.'+STRMID(STRTRIM(STRING(THETA_TYPE),1),0,10)+'.'+STRMID(STRTRIM(STRING(PHI_TYPE),1),0,10)+'.all.fits', HDR_SUM, /CREATE
 
-CREATE_STRUCT, calInput, 'input_cal_dhsim', ['EVT_ID','BAR_ID', 'BAR_ENERGY'], $
-'I,I,F20.15', DIMEN = n_elements(calInput_event_id_tot_cal)
-calInput.EVT_ID = calInput_event_id_tot_cal
-calInput.BAR_ID = calInput_bar_id_tot
-calInput.BAR_ENERGY = calInput_bar_ene_tot
+if (cal_flag EQ 1) then begin
+  CREATE_STRUCT, calInput, 'input_cal_dhsim', ['EVT_ID','BAR_ID', 'BAR_ENERGY'], $
+  'I,I,F20.15', DIMEN = n_elements(calInput_event_id_tot_cal)
+  calInput.EVT_ID = calInput_event_id_tot_cal
+  calInput.BAR_ID = calInput_bar_id_tot
+  calInput.BAR_ENERGY = calInput_bar_ene_tot
+  
+  
+  hdr_calInput = ['COMMENT  ASTROGAM V2.0 Geant4 simulation', $
+                 'N_in     = '+strtrim(string(N_in),1), $
+                 'Energy     = '+ene_type, $
+                 'Theta     = '+strtrim(string(theta_type),1), $
+                 'Phi     = '+strtrim(string(phi_type),1), $
+                 'Energy unit = GeV']
+  
+  MWRFITS, calInput, filepath+'G4.CAL.ASTROGAM'+astrogam_version+'.'+py_name+'.'+sim_name+'.'+stripname+'.'+sname+'.'+strmid(strtrim(string(N_in),1),0,10)+part_type+'.'+ene_type+'MeV.'+strmid(strtrim(string(theta_type),1),0,10)+'.'+strmid(strtrim(string(phi_type),1),0,10)+'.all.fits', hdr_calInput, /create
+  
+  CREATE_STRUCT, calInputSum, 'input_cal', ['EVT_ID','BAR_ENERGY'], $
+  'I,F20.15', DIMEN = n_elements(calInputSum_event_id_tot_cal)
+  calInputSum.EVT_ID = calInputSum_event_id_tot_cal
+  calInputSum.BAR_ENERGY = calInputSum_bar_ene_tot
 
+  
+  hdr_calInputSum = ['COMMENT  ASTROGAM V2.0 Geant4 simulation', $
+                 'N_in     = '+strtrim(string(N_in),1), $
+                 'Energy     = '+ene_type, $
+                 'Theta     = '+strtrim(string(theta_type),1), $
+                 'Phi     = '+strtrim(string(phi_type),1), $
+                 'Energy unit = GeV']
+  
+  MWRFITS, calInputSum, filepath+'SUM.CAL.ASTROGAM'+astrogam_version+'.'+py_name+'.'+sim_name+'.'+stripname+'.'+sname+'.'+strmid(strtrim(string(N_in),1),0,10)+part_type+'.'+ene_type+'MeV.'+strmid(strtrim(string(theta_type),1),0,10)+'.'+strmid(strtrim(string(phi_type),1),0,10)+'.all.fits', hdr_calInputSum, /create
 
-hdr_calInput = ['COMMENT  ASTROGAM V2.0 Geant4 simulation', $
-               'N_in     = '+strtrim(string(N_in),1), $
-               'Energy     = '+ene_type, $
-               'Theta     = '+strtrim(string(theta_type),1), $
-               'Phi     = '+strtrim(string(phi_type),1), $
-               'Energy unit = GeV']
-
-MWRFITS, calInput, filepath+'G4.CAL.ASTROGAM'+astrogam_version+'.'+py_name+'.'+sim_name+'.'+stripname+'.'+sname+'.'+strmid(strtrim(string(N_in),1),0,10)+part_type+'.'+ene_type+'MeV.'+strmid(strtrim(string(theta_type),1),0,10)+'.'+strmid(strtrim(string(phi_type),1),0,10)+'.all.fits', hdr_calInput, /create
-
-CREATE_STRUCT, calInputSum, 'input_cal', ['EVT_ID','BAR_ENERGY'], $
-'I,F20.15', DIMEN = n_elements(calInputSum_event_id_tot_cal)
-calInputSum.EVT_ID = calInputSum_event_id_tot_cal
-calInputSum.BAR_ENERGY = calInputSum_bar_ene_tot
-
-
-hdr_calInputSum = ['COMMENT  ASTROGAM V2.0 Geant4 simulation', $
-               'N_in     = '+strtrim(string(N_in),1), $
-               'Energy     = '+ene_type, $
-               'Theta     = '+strtrim(string(theta_type),1), $
-               'Phi     = '+strtrim(string(phi_type),1), $
-               'Energy unit = GeV']
-
-MWRFITS, calInputSum, filepath+'SUM.CAL.ASTROGAM'+astrogam_version+'.'+py_name+'.'+sim_name+'.'+stripname+'.'+sname+'.'+strmid(strtrim(string(N_in),1),0,10)+part_type+'.'+ene_type+'MeV.'+strmid(strtrim(string(theta_type),1),0,10)+'.'+strmid(strtrim(string(phi_type),1),0,10)+'.all.fits', hdr_calInputSum, /create
-
+endif
 ;CREATE_STRUCT, acInput, 'input_ac_dhsim', ['EVT_ID', 'AC_PANEL', 'AC_SUBPANEL', 'E_DEP'], $
 ;'I,A,I,F20.15', DIMEN = n_elements(acInput_event_id_tot_ac)
 ;acInput.EVT_ID = acInput_event_id_tot_ac
