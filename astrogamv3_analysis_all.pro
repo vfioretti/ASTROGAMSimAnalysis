@@ -61,7 +61,7 @@ read, sim_type, PROMPT='% - Enter simulation type [0 = Mono, 1 = Range, 2 = Chen
 read, n_files, PROMPT='% - Enter number of input files:'
 read, py_list, PROMPT='% - Enter the Physics List [0 = QGSP_BERT_EMV, 100 = ARGO, 300 = FERMI, 400 = ASTROMEV]:'
 read, N_in, PROMPT='% - Enter the number of emitted particles:'
-read, part_type, PROMPT='% - Enter the particle type [ph = photons, mu = muons, g = geantino]:'
+read, part_type, PROMPT='% - Enter the particle type [ph = photons, mu = muons, g = geantino, p = proton]:'
 read, ene_range, PROMPT='% - Enter energy distribution [0 = mono, 1 = range]:'
 if (ene_range EQ 0) then begin
   read, ene_type, PROMPT='% - Enter energy [MeV]:'
@@ -125,8 +125,12 @@ endif
 read, isStrip, PROMPT='% - Strip/Pixels activated?:'
 read, repli, PROMPT='% - Strips/Pixels replicated?:'
 read, cal_flag, PROMPT='% - Is Cal present? [0 = false, 1 = true]:'
-if (cal_flag EQ 0) then dir_cal = '/OnlyTracker'
-if (cal_flag EQ 1) then dir_cal = ''
+read, ac_flag, PROMPT='% - Is AC present? [0 = false, 1 = true]:'
+
+if ((cal_flag EQ 0) AND (ac_flag EQ 0))  then dir_cal = '/OnlyTracker'
+if ((cal_flag EQ 1) AND (ac_flag EQ 0)) then dir_cal = '/noAC'
+if ((cal_flag EQ 0) AND (ac_flag EQ 1)) then dir_cal = '/noCAL'
+if ((cal_flag EQ 1) AND (ac_flag EQ 1)) then dir_cal = ''
 
 read, passive_flag, PROMPT='% - Is Passive present? [0 = false, 1 = true]:'
 if (passive_flag EQ 0) then dir_passive = ''
@@ -232,12 +236,6 @@ if (isStrip) then begin
   SUMTRACKER_Glob_zpos_cluster = -1.
   SUMTRACKER_Glob_energy_dep_cluster = -1.
   
-  ; G4.AC.AGILE<version>.<phys>List.<strip>.<point>.<n_in>ph.<energy>MeV.<theta>.<phi>.all.fits
-  acInput_event_id_tot_ac = -1l
-  acInput_AC_panel = ''
-  acInput_AC_subpanel = -1l
-  acInput_energy_dep_tot_ac = -1.
-  
   ; - AA_STRIP_ASTROGAM'+astrogam_version+'_'+py_name+'_'+sim_name+'_'+stripname+'_'+sname+'_'+strmid(strtrim(string(N_in),1),0,10)+part_type+'_'+ene_type+'MeV_'+strmid(strtrim(string(theta_type),1),0,10)+'_'+strmid(strtrim(string(phi_type),1),0,10)+'.'+strtrim(string(ifile),1)+'.dat
   ; ASCII Columns:
   ; - c1 = event ID
@@ -323,6 +321,12 @@ calInput_bar_ene_tot = -1.
 ; SUM.CAL.ASTROGAM<version>.<phys>List.<strip>.<point>.<n_in>ph.<energy>MeV.<theta>.<phi>.all.fits
 calInputSum_event_id_tot_cal = -1l
 calInputSum_bar_ene_tot = -1.
+
+; G4.AC.ASTROGAM<version>.<phys>List.<strip>.<point>.<n_in>ph.<energy>MeV.<theta>.<phi>.all.fits
+acInput_event_id_tot_ac = -1l
+acInput_AC_panel = ''
+acInput_AC_subpanel = -1l
+acInput_energy_dep_tot_ac = -1.
 
 filepath = './ASTROGAM'+astrogam_version+sdir+'/theta'+strtrim(string(theta_type),1)+'/'+stripDir+py_dir+'/'+sim_name+'/'+ene_type+'MeV/'+strtrim(string(N_in),1)+part_type+dir_cal+dir_passive+'/'+strtrim(string(energy_thresh),1)+'keV/'
 print, 'LEVEL0 file path: ', filepath
@@ -515,17 +519,18 @@ for ifile=0, n_files-1 do begin
       calInputSum_event_id_tot_cal = [calInput_event_id_tot_cal, struct_calsum.EVT_ID]
       calInputSum_bar_ene_tot = [calInput_bar_ene_tot, struct_calsum.BAR_ENERGY]
     endif     
-;    filenamefits_ac = filepath+'G4.AC.AGILE'+astrogam_version+'.'+py_name+'.'+sim_name+'.'+stripname+'.'+sname+'.'+strmid(strtrim(string(N_in),1),0,10)+'ph.'+ene_type+'MeV.'+strmid(strtrim(string(theta_type),1),0,10)+'.'+strmid(strtrim(string(phi_type),1),0,10)+'.'+strtrim(string(ifile),1)+'.fits'   
-;    struct_ac = mrdfits(filenamefits_ac,$ 
-;                     1, $
-;                     structyp = 'ac', $
-;                     /unsigned)
-;
-;    acInput_event_id_tot_ac = [acInput_event_id_tot_ac, struct_ac.EVT_ID]
-;    acInput_AC_panel = [acInput_AC_panel, struct_ac.AC_PANEL]
-;    acInput_AC_subpanel = [acInput_AC_subpanel, struct_ac.AC_SUBPANEL]
-;    acInput_energy_dep_tot_ac = [acInput_energy_dep_tot_ac, struct_ac.E_DEP]
-    
+    if (ac_flag EQ 1) then begin
+      filenamefits_ac = filepath+'G4.AC.ASTROGAM'+astrogam_version+'.'+py_name+'.'+sim_name+'.'+stripname+'.'+sname+'.'+strmid(strtrim(string(N_in),1),0,10)+part_type+'.'+ene_type+'MeV.'+strmid(strtrim(string(theta_type),1),0,10)+'.'+strmid(strtrim(string(phi_type),1),0,10)+'.'+strtrim(string(ifile),1)+'.fits'   
+      struct_ac = mrdfits(filenamefits_ac,$ 
+                       1, $
+                       structyp = 'ac', $
+                       /unsigned)
+  
+      acInput_event_id_tot_ac = [acInput_event_id_tot_ac, struct_ac.EVT_ID]
+      acInput_AC_panel = [acInput_AC_panel, struct_ac.AC_PANEL]
+      acInput_AC_subpanel = [acInput_AC_subpanel, struct_ac.AC_SUBPANEL]
+      acInput_energy_dep_tot_ac = [acInput_energy_dep_tot_ac, struct_ac.E_DEP]
+    endif
 endfor
 
 if (isStrip) then begin
@@ -585,7 +590,7 @@ if (isStrip) then begin
   ; - c10 = number of strips composing the cluster
   
   for r=0l, n_elements(aa_kalman_event_id)-1 do begin
-      printf, lun, aa_kalman_event_id(r), aa_kalman_theta_in(r), aa_kalman_phi_in(r), aa_kalman_ene_in(r), aa_kalman_plane_id(r), aa_kalman_zpos(r), aa_kalman_si_id(r), aa_kalman_pos(r), aa_kalman_edep(r), aa_kalman_strip_number(r), format='(I5,I5,I5,I5,I5,F10.5,I5,F10.5,F10.5,I5)'
+      printf, lun, aa_kalman_event_id(r), aa_kalman_theta_in(r), aa_kalman_phi_in(r), aa_kalman_ene_in(r), aa_kalman_plane_id(r), aa_kalman_zpos(r), aa_kalman_si_id(r), aa_kalman_pos(r), aa_kalman_edep(r), aa_kalman_strip_number(r), format='(I5,I5,I5,I7,I5,F10.5,I5,F10.5,F10.5,I5)'
   endfor
   
   Free_lun, lun
@@ -698,7 +703,7 @@ endif else begin
   ; - c10 = number of strips composing the cluster
 
   for r=0l, n_elements(aa_fake_event_id)-1 do begin
-    printf, lun, aa_fake_event_id(r), aa_fake_theta_in(r), aa_fake_phi_in(r), aa_fake_ene_in(r), aa_fake_plane_id(r), aa_fake_zpos(r), aa_fake_si_id(r), aa_fake_pos(r), aa_fake_edep(r), aa_fake_strip_number(r), format='(I5,I5,I5,I5,I5,F10.5,I5,F10.5,F10.5,I5)'
+    printf, lun, aa_fake_event_id(r), aa_fake_theta_in(r), aa_fake_phi_in(r), aa_fake_ene_in(r), aa_fake_plane_id(r), aa_fake_zpos(r), aa_fake_si_id(r), aa_fake_pos(r), aa_fake_edep(r), aa_fake_strip_number(r), format='(I5,I5,I5,I7,I5,F10.5,I5,F10.5,F10.5,I5)'
   endfor
 
   Free_lun, lun
@@ -716,11 +721,13 @@ if (cal_flag EQ 1) then begin
   calInputSum_event_id_tot_cal = calInputSum_event_id_tot_cal[1:*]
   calInputSum_bar_ene_tot = calInputSum_bar_ene_tot[1:*]
 endif
-; G4.AC.AGILE<version>.<phys>List.<strip>.<point>.<n_in>ph.<energy>MeV.<theta>.<phi>.all.fits
-;acInput_event_id_tot_ac = acInput_event_id_tot_ac[1:*]
-;acInput_AC_panel = acInput_AC_panel[1:*]
-;acInput_AC_subpanel = acInput_AC_subpanel[1:*]
-;acInput_energy_dep_tot_ac = acInput_energy_dep_tot_ac[1:*]
+if (ac_flag EQ 1) then begin
+  ; G4.AC.ASTROGAM<version>.<phys>List.<strip>.<point>.<n_in>ph.<energy>MeV.<theta>.<phi>.all.fits
+  acInput_event_id_tot_ac = acInput_event_id_tot_ac[1:*]
+  acInput_AC_panel = acInput_AC_panel[1:*]
+  acInput_AC_subpanel = acInput_AC_subpanel[1:*]
+  acInput_energy_dep_tot_ac = acInput_energy_dep_tot_ac[1:*]
+endif
 
 if (isStrip) then begin
   
@@ -916,23 +923,24 @@ if (cal_flag EQ 1) then begin
   MWRFITS, calInputSum, filepath+'SUM.CAL.ASTROGAM'+astrogam_version+'.'+py_name+'.'+sim_name+'.'+stripname+'.'+sname+'.'+strmid(strtrim(string(N_in),1),0,10)+part_type+'.'+ene_type+'MeV.'+strmid(strtrim(string(theta_type),1),0,10)+'.'+strmid(strtrim(string(phi_type),1),0,10)+'.all.fits', hdr_calInputSum, /create
 
 endif
-;CREATE_STRUCT, acInput, 'input_ac_dhsim', ['EVT_ID', 'AC_PANEL', 'AC_SUBPANEL', 'E_DEP'], $
-;'I,A,I,F20.15', DIMEN = n_elements(acInput_event_id_tot_ac)
-;acInput.EVT_ID = acInput_event_id_tot_ac
-;acInput.AC_PANEL = acInput_AC_panel
-;acInput.AC_SUBPANEL = acInput_AC_subpanel
-;acInput.E_DEP = acInput_energy_dep_tot_ac
-;
-;
-;hdr_acInput = ['COMMENT  AGILE V2.0 Geant4 simulation', $
-;               'N_in     = '+strtrim(string(N_in),1), $
-;               'Energy     = '+ene_type, $
-;               'Theta     = '+strtrim(string(theta_type),1), $
-;               'Phi     = '+strtrim(string(phi_type),1), $
-;               'Energy unit = GeV']
-;
-;MWRFITS, acInput, filepath+'G4.AC.AGILE'+astrogam_version+'.'+py_name+'.'+sim_name+'.'+stripname+'.'+sname+'.'+strmid(strtrim(string(N_in),1),0,10)+'ph.'+ene_type+'MeV.'+strmid(strtrim(string(theta_type),1),0,10)+'.'+strmid(strtrim(string(phi_type),1),0,10)+'.all.fits', hdr_acInput, /create
-
+if (ac_flag EQ 1) then begin
+  CREATE_STRUCT, acInput, 'input_ac_dhsim', ['EVT_ID', 'AC_PANEL', 'AC_SUBPANEL', 'E_DEP'], $
+  'I,A,I,F20.15', DIMEN = n_elements(acInput_event_id_tot_ac)
+  acInput.EVT_ID = acInput_event_id_tot_ac
+  acInput.AC_PANEL = acInput_AC_panel
+  acInput.AC_SUBPANEL = acInput_AC_subpanel
+  acInput.E_DEP = acInput_energy_dep_tot_ac
+  
+  
+  hdr_acInput = ['COMMENT  ASTROGAM V'+astrogam_version+' Geant4 simulation', $
+                 'N_in     = '+strtrim(string(N_in),1), $
+                 'Energy     = '+ene_type, $
+                 'Theta     = '+strtrim(string(theta_type),1), $
+                 'Phi     = '+strtrim(string(phi_type),1), $
+                 'Energy unit = GeV']
+  
+  MWRFITS, acInput, filepath+'G4.AC.ASTROGAM'+astrogam_version+'.'+py_name+'.'+sim_name+'.'+stripname+'.'+sname+'.'+strmid(strtrim(string(N_in),1),0,10)+part_type+'.'+ene_type+'MeV.'+strmid(strtrim(string(theta_type),1),0,10)+'.'+strmid(strtrim(string(phi_type),1),0,10)+'.all.fits', hdr_acInput, /create
+endif
 
 
 

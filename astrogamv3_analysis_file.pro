@@ -52,7 +52,7 @@ read, astrogam_version, PROMPT='% - Enter ASTROGAM release (e.g. V1.4):'
 read, sim_type, PROMPT='% - Enter simulation type [0 = Mono, 1 = Range, 2 = Chen, 3: Vela, 4: Crab, 4: G400]:'
 read, py_list, PROMPT='% - Enter the Physics List [0 = QGSP_BERT_EMV, 100 = ARGO, 300 = FERMI, 400 = ASTROMEV]:'
 read, N_in, PROMPT='% - Enter the number of emitted particles:'
-read, part_type, PROMPT='% - Enter the particle type [ph = photons, mu = muons, g = geantino]:'
+read, part_type, PROMPT='% - Enter the particle type [ph = photons, mu = muons, g = geantino, p = proton]:'
 read, n_fits, PROMPT='% - Enter number of FITS files:'
 read, ene_range, PROMPT='% - Enter energy distribution [0 = mono, 1 = range]:'
 if (ene_range EQ 0) then begin
@@ -118,8 +118,12 @@ read, isStrip, PROMPT='% - Strip/Pixels activated?:'
 read, repli, PROMPT='% - Strips/Pixels replicated?:'
 
 read, cal_flag, PROMPT='% - Is Cal present? [0 = false, 1 = true]:'
-if (cal_flag EQ 0) then dir_cal = '/OnlyTracker'
-if (cal_flag EQ 1) then dir_cal = ''
+read, ac_flag, PROMPT='% - Is AC present? [0 = false, 1 = true]:'
+
+if ((cal_flag EQ 0) AND (ac_flag EQ 0))  then dir_cal = '/OnlyTracker'
+if ((cal_flag EQ 1) AND (ac_flag EQ 0)) then dir_cal = '/noAC'
+if ((cal_flag EQ 0) AND (ac_flag EQ 1)) then dir_cal = '/noCAL'
+if ((cal_flag EQ 1) AND (ac_flag EQ 1)) then dir_cal = ''
 
 read, passive_flag, PROMPT='% - Is Passive present? [0 = false, 1 = true]:'
 if (passive_flag EQ 0) then dir_passive = ''
@@ -164,14 +168,14 @@ if (astrogam_version EQ 'V3.0') then begin
     cal_vol_start = 50000
     cal_vol_end = 64399
 
-    ;ac_vol_start = 301
-    ;ac_vol_end = 350
+    ac_vol_start = 301
+    ac_vol_end = 350
  
-    ;panel_S = [301, 302, 303]
-    ;panel_D = [311, 312, 313]
-    ;panel_F = [321, 322, 323]
-    ;panel_B = [331, 332, 333]
-    ;panel_top = 340
+    panel_S = [301, 302, 303]
+    panel_D = [311, 312, 313]
+    panel_F = [321, 322, 323]
+    panel_B = [331, 332, 333]
+    panel_top = 340
         
     ; --------> design
     N_tray = 70l
@@ -253,23 +257,23 @@ for ifile=0, n_fits-1 do begin
     phi_exit_cal = -1.
 
     ; AC    
-;    event_id_ac = -1l
-;    vol_id_ac = -1l
-;    moth_id_ac = -1l
-;    energy_dep_ac = -1.
-;    
-;    ent_x_ac = -1.
-;    ent_y_ac = -1.
-;    ent_z_ac = -1.
-;    exit_x_ac = -1.
-;    exit_y_ac = -1.
-;    exit_z_ac = -1.
-;    
-;    theta_ent_ac = -1.
-;    phi_ent_ac = -1.
-;    
-;    theta_exit_ac = -1.
-;    phi_exit_ac = -1.
+    event_id_ac = -1l
+    vol_id_ac = -1l
+    moth_id_ac = -1l
+    energy_dep_ac = -1.
+    
+    ent_x_ac = -1.
+    ent_y_ac = -1.
+    ent_z_ac = -1.
+    exit_x_ac = -1.
+    exit_y_ac = -1.
+    exit_z_ac = -1.
+    
+    theta_ent_ac = -1.
+    phi_ent_ac = -1.
+    
+    theta_exit_ac = -1.
+    phi_exit_ac = -1.
 
     filename = filepath+'/xyz.'+strtrim(string(ifile), 1)+'.fits.gz'
     struct = mrdfits(filename,$ 
@@ -369,27 +373,47 @@ for ifile=0, n_fits-1 do begin
         endelse
        endif
       endif
-;     if ((struct(k).VOLUME_ID GE ac_vol_start) AND (struct(k).VOLUME_ID LE ac_vol_end)) then begin
-;      if (struct(k).E_DEP GT 0.d) then begin        
-;         event_id_ac = [event_id_ac, struct(k).EVT_ID] 
-;         vol_id_ac = [vol_id_ac, struct(k).VOLUME_ID] 
-;         if (isStrip EQ 1) then moth_id_ac = [moth_id_ac, struct(k).MOTHER_ID] else moth_id_ac = [moth_id_ac, 0]
-;         energy_dep_ac = [energy_dep_ac, struct(k).E_DEP] 
-;        
-;         ent_x_ac = [ent_x_ac, struct(k).X_ENT]  
-;         ent_y_ac = [ent_y_ac, struct(k).Y_ENT]  
-;         ent_z_ac = [ent_z_ac, struct(k).Z_ENT]  
-;         exit_x_ac = [exit_x_ac, struct(k).X_EXIT]  
-;         exit_y_ac = [exit_y_ac, struct(k).Y_EXIT]  
-;         exit_z_ac = [exit_z_ac, struct(k).Z_EXIT]  
-;        
-;         theta_ent_ac = [theta_ent_ac, (180./!PI)*acos(-(struct(k).MDZ_ENT))]
-;         phi_ent_ac = [phi_ent_ac, (180./!PI)*atan((struct(k).MDY_ENT)/(struct(k).MDX_ENT))]
-;
-;         theta_exit_ac = [theta_exit_ac, (180./!PI)*acos(-(struct(k).MDZ_EXIT))]
-;         phi_exit_ac = [phi_exit_ac, (180./!PI)*atan((struct(k).MDY_EXIT)/(struct(k).MDX_EXIT))]        
-;      endif
-;     endif
+     if ((struct(k).VOLUME_ID GE ac_vol_start) AND (struct(k).VOLUME_ID LE ac_vol_end)) then begin
+      if (part_type EQ 'g') then begin
+        event_id_ac = [event_id_ac, struct(k).EVT_ID]
+        vol_id_ac = [vol_id_ac, struct(k).VOLUME_ID]
+        if (isStrip EQ 1) then moth_id_ac = [moth_id_ac, struct(k).MOTHER_ID] else moth_id_ac = [moth_id_ac, 0]
+        energy_dep_ac = [energy_dep_ac, struct(k).E_DEP]
+
+        ent_x_ac = [ent_x_ac, struct(k).X_ENT]
+        ent_y_ac = [ent_y_ac, struct(k).Y_ENT]
+        ent_z_ac = [ent_z_ac, struct(k).Z_ENT]
+        exit_x_ac = [exit_x_ac, struct(k).X_EXIT]
+        exit_y_ac = [exit_y_ac, struct(k).Y_EXIT]
+        exit_z_ac = [exit_z_ac, struct(k).Z_EXIT]
+
+        theta_ent_ac = [theta_ent_ac, (180./!PI)*acos(-(struct(k).MDZ_ENT))]
+        phi_ent_ac = [phi_ent_ac, (180./!PI)*atan((struct(k).MDY_ENT)/(struct(k).MDX_ENT))]
+
+        theta_exit_ac = [theta_exit_ac, (180./!PI)*acos(-(struct(k).MDZ_EXIT))]
+        phi_exit_ac = [phi_exit_ac, (180./!PI)*atan((struct(k).MDY_EXIT)/(struct(k).MDX_EXIT))]        
+      endif else begin
+       if (struct(k).E_DEP GT 0.d) then begin        
+         event_id_ac = [event_id_ac, struct(k).EVT_ID] 
+         vol_id_ac = [vol_id_ac, struct(k).VOLUME_ID] 
+         if (isStrip EQ 1) then moth_id_ac = [moth_id_ac, struct(k).MOTHER_ID] else moth_id_ac = [moth_id_ac, 0]
+         energy_dep_ac = [energy_dep_ac, struct(k).E_DEP] 
+        
+         ent_x_ac = [ent_x_ac, struct(k).X_ENT]  
+         ent_y_ac = [ent_y_ac, struct(k).Y_ENT]  
+         ent_z_ac = [ent_z_ac, struct(k).Z_ENT]  
+         exit_x_ac = [exit_x_ac, struct(k).X_EXIT]  
+         exit_y_ac = [exit_y_ac, struct(k).Y_EXIT]  
+         exit_z_ac = [exit_z_ac, struct(k).Z_EXIT]  
+        
+         theta_ent_ac = [theta_ent_ac, (180./!PI)*acos(-(struct(k).MDZ_ENT))]
+         phi_ent_ac = [phi_ent_ac, (180./!PI)*atan((struct(k).MDY_ENT)/(struct(k).MDX_ENT))]
+
+         theta_exit_ac = [theta_exit_ac, (180./!PI)*acos(-(struct(k).MDZ_EXIT))]
+         phi_exit_ac = [phi_exit_ac, (180./!PI)*atan((struct(k).MDY_EXIT)/(struct(k).MDX_EXIT))]        
+       endif
+      endelse
+     endif
      
     endfor
  
@@ -443,25 +467,28 @@ for ifile=0, n_fits-1 do begin
       theta_exit_cal = theta_exit_cal[1:*]
       phi_exit_cal = phi_exit_cal[1:*]
     endif
+    
     ; AC (removing fake starting value)
-;    event_id_ac = event_id_ac[1:*]
-;    vol_id_ac = vol_id_ac[1:*]
-;    moth_id_ac = moth_id_ac[1:*]
-;    energy_dep_ac = energy_dep_ac[1:*]
-;
-;    ent_x_ac = (ent_x_ac[1:*])/10.
-;    ent_y_ac = (ent_y_ac[1:*])/10.
-;    ent_z_ac = (ent_z_ac[1:*])/10.
-;    exit_x_ac = (exit_x_ac[1:*])/10.
-;    exit_y_ac = (exit_y_ac[1:*])/10.
-;    exit_z_ac = (exit_z_ac[1:*])/10.
-;
-;    theta_ent_ac = theta_ent_ac[1:*]
-;    phi_ent_ac = phi_ent_ac[1:*]
-;
-;    theta_exit_ac = theta_exit_ac[1:*]
-;    phi_exit_ac = phi_exit_ac[1:*]
-
+    if (ac_flag EQ 1) then begin
+      event_id_ac = event_id_ac[1:*]
+      vol_id_ac = vol_id_ac[1:*]
+      moth_id_ac = moth_id_ac[1:*]
+      energy_dep_ac = energy_dep_ac[1:*]
+  
+      ent_x_ac = (ent_x_ac[1:*])/10.
+      ent_y_ac = (ent_y_ac[1:*])/10.
+      ent_z_ac = (ent_z_ac[1:*])/10.
+      exit_x_ac = (exit_x_ac[1:*])/10.
+      exit_y_ac = (exit_y_ac[1:*])/10.
+      exit_z_ac = (exit_z_ac[1:*])/10.
+  
+      theta_ent_ac = theta_ent_ac[1:*]
+      phi_ent_ac = phi_ent_ac[1:*]
+  
+      theta_exit_ac = theta_exit_ac[1:*]
+      phi_exit_ac = phi_exit_ac[1:*]
+    endif
+    
     ; %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     ;                             Processing the tracker 
     ; %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1274,7 +1301,7 @@ if (astrogam_version EQ 'V3.0') then begin
         where_x = where(Glob_Si_id_test_temp EQ 0)
         if (where_x(0) NE -1) then begin
           for r=0l, n_elements(where_x)-1 do begin
-            printf, lun, Glob_event_id_test(j), theta_type, phi_type, ene_type, Glob_plane_id_test_temp(where_x(r)), Glob_zpos_test_temp(where_x(r)), 0, Glob_Strip_id_test_temp(where_x(r)), Glob_pos_test_temp(where_x(r)), Glob_energy_dep_test_temp(where_x(r)), format='(I5,I5,I5,I5,I5,F10.5,I5,I5,F10.5,F10.5)'
+            printf, lun, Glob_event_id_test(j), theta_type, phi_type, ene_type, Glob_plane_id_test_temp(where_x(r)), Glob_zpos_test_temp(where_x(r)), 0, Glob_Strip_id_test_temp(where_x(r)), Glob_pos_test_temp(where_x(r)), Glob_energy_dep_test_temp(where_x(r)), format='(I5,I5,I5,I7,I5,F10.5,I5,I5,F10.5,F10.5)'
           endfor
         endif
   
@@ -1282,7 +1309,7 @@ if (astrogam_version EQ 'V3.0') then begin
         where_y = where(Glob_Si_id_test_temp EQ 1)
         if (where_y(0) NE -1) then begin
           for r=0l, n_elements(where_y)-1 do begin
-            printf, lun, Glob_event_id_test(j), theta_type, phi_type, ene_type, Glob_plane_id_test_temp(where_y(r)), Glob_zpos_test_temp(where_y(r)), 1, Glob_Strip_id_test_temp(where_y(r)), Glob_pos_test_temp(where_y(r)), Glob_energy_dep_test_temp(where_y(r)), format='(I5,I5,I5,I5,I5,F10.5,I5,I5,F10.5,F10.5)'       
+            printf, lun, Glob_event_id_test(j), theta_type, phi_type, ene_type, Glob_plane_id_test_temp(where_y(r)), Glob_zpos_test_temp(where_y(r)), 1, Glob_Strip_id_test_temp(where_y(r)), Glob_pos_test_temp(where_y(r)), Glob_energy_dep_test_temp(where_y(r)), format='(I5,I5,I5,I7,I5,F10.5,I5,I5,F10.5,F10.5)'       
           endfor
         endif
         ; ------------------------------------
@@ -1843,7 +1870,7 @@ if (astrogam_version EQ 'V3.0') then begin
               where_x = where(Glob_Si_id_cluster_temp EQ 0)
               if (where_x(0) NE -1) then begin
                 for r=0l, n_elements(where_x)-1 do begin
-                  printf, lun, Glob_event_id_cluster(j), theta_type, phi_type, ene_type, Glob_plane_id_cluster_temp(where_x(r)), Glob_zpos_cluster_temp(where_x(r)), 0, Glob_pos_cluster_temp(where_x(r)), Glob_energy_dep_cluster_temp(where_x(r)), Glob_Strip_number_cluster_temp(where_x(r)), format='(I5,I5,I5,I5,I5,F10.5,I5,F10.5,F10.5,I5)'
+                  printf, lun, Glob_event_id_cluster(j), theta_type, phi_type, ene_type, Glob_plane_id_cluster_temp(where_x(r)), Glob_zpos_cluster_temp(where_x(r)), 0, Glob_pos_cluster_temp(where_x(r)), Glob_energy_dep_cluster_temp(where_x(r)), Glob_Strip_number_cluster_temp(where_x(r)), format='(I5,I5,I5,I7,I5,F10.5,I5,F10.5,F10.5,I5)'
                 endfor
               endif
          
@@ -1851,7 +1878,7 @@ if (astrogam_version EQ 'V3.0') then begin
               where_y = where(Glob_Si_id_cluster_temp EQ 1)
               if (where_y(0) NE -1) then begin
                for r=0l, n_elements(where_y)-1 do begin
-                  printf, lun, Glob_event_id_cluster(j), theta_type, phi_type, ene_type, Glob_plane_id_cluster_temp(where_y(r)), Glob_zpos_cluster_temp(where_y(r)), 1, Glob_pos_cluster_temp(where_y(r)), Glob_energy_dep_cluster_temp(where_y(r)), Glob_Strip_number_cluster_temp(where_y(r)), format='(I5,I5,I5,I5,I5,F10.5,I5,F10.5,F10.5,I5)'   
+                  printf, lun, Glob_event_id_cluster(j), theta_type, phi_type, ene_type, Glob_plane_id_cluster_temp(where_y(r)), Glob_zpos_cluster_temp(where_y(r)), 1, Glob_pos_cluster_temp(where_y(r)), Glob_energy_dep_cluster_temp(where_y(r)), Glob_Strip_number_cluster_temp(where_y(r)), format='(I5,I5,I5,I7,I5,F10.5,I5,F10.5,F10.5,I5)'   
                endfor
               endif
               ; ------------------------------------
@@ -2072,12 +2099,13 @@ if (astrogam_version EQ 'V3.0') then begin
                 planey_uniq = planey_real(uniq(planey_real))
                 n_planex = n_elements(planex_uniq)
                 n_planey = n_elements(planey_uniq)
+
                 if ((n_planex GE 4) and (n_planey GE 4)) then begin
                     ;print, eventid_kalman(jp)
                     trigger_index = [trigger_index, jp]
                 endif
           endfor
-          
+
           if (N_elements(trigger_index) GT 1) then begin
              trigger_index = trigger_index[1:*]
              
@@ -2309,110 +2337,112 @@ if (astrogam_version EQ 'V3.0') then begin
 ;    
 ;    Free_lun, lun
 
+if (ac_flag EQ 1) then begin
+  
 
     print, '%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%'
     print, '                          AC'
     print, '                  Summing the energy                '
     print, '%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%'
     
-;    N_trig_ac = 0l
-;    
-;    event_id_tot_ac = -1l
-;    vol_id_tot_ac = -1l
-;    moth_id_tot_ac = -1l
-;    energy_dep_tot_ac = -1.
-;    
-;    j=0l
-;    while (1) do begin
-;        where_event_eq = where(event_id_ac EQ event_id_ac(j))
-;        
-;        N_trig_ac = N_trig_ac + 1
-;        
-;        vol_id_temp_ac = vol_id_ac(where_event_eq) 
-;        moth_id_temp_ac = moth_id_ac(where_event_eq) 
-;        energy_dep_temp_ac = energy_dep_ac(where_event_eq) 
-;            
-;        r = 0l
-;        while(1) do begin
-;           where_vol_eq = where(vol_id_temp_ac EQ vol_id_temp_ac(r), complement = where_other_vol)
-;           event_id_tot_ac = [event_id_tot_ac, event_id_ac(j)]
-;           vol_id_tot_ac = [vol_id_tot_ac, vol_id_temp_ac(r)]
-;           moth_id_tot_ac = [moth_id_tot_ac, moth_id_temp_ac(r)]
-;           energy_dep_tot_ac = [energy_dep_tot_ac, total(energy_dep_temp_ac(where_vol_eq))]
-;           if (where_other_vol(0) NE -1) then begin
-;             vol_id_temp_ac = vol_id_temp_ac(where_other_vol)
-;             moth_id_temp_ac = moth_id_temp_ac(where_other_vol)
-;             energy_dep_temp_ac = energy_dep_temp_ac(where_other_vol)
-;           endif else break
-;        endwhile
-;            
-;        N_event_eq = n_elements(where_event_eq)
-;        if where_event_eq(N_event_eq-1) LT (n_elements(event_id_ac)-1) then begin
-;          j = where_event_eq(N_event_eq-1)+1
-;        endif else break
-;    endwhile
-;    
-;    
-;    if (n_elements(event_id_tot_ac) GT 1) then begin
-;      event_id_tot_ac = event_id_tot_ac[1:*]
-;      vol_id_tot_ac = vol_id_tot_ac[1:*]
-;      moth_id_tot_ac = moth_id_tot_ac[1:*]
-;      energy_dep_tot_ac = energy_dep_tot_ac[1:*]
-;    endif
-;    
-;    ; AC panel IDs
-;    
-;    AC_panel = strarr(n_elements(vol_id_tot_ac))
-;    AC_subpanel = intarr(n_elements(vol_id_tot_ac))
-;    
-;    
-;    for j=0l, n_elements(vol_id_tot_ac)-1 do begin
-;     if ((vol_id_tot_ac(j) GE panel_S[0]) AND (vol_id_tot_ac(j) LE panel_S[2])) then begin
-;        AC_panel(j) = 'S'
-;        if (vol_id_tot_ac(j) EQ panel_S[0]) then AC_subpanel(j) = 3
-;        if (vol_id_tot_ac(j) EQ panel_S[1]) then AC_subpanel(j) = 2
-;        if (vol_id_tot_ac(j) EQ panel_S[2]) then AC_subpanel(j) = 1
-;     endif
-;     if ((vol_id_tot_ac(j) GE panel_D[0]) AND (vol_id_tot_ac(j) LE panel_D[2])) then begin
-;        AC_panel(j) = 'D'
-;        if (vol_id_tot_ac(j) EQ panel_D[0]) then AC_subpanel(j) = 3
-;        if (vol_id_tot_ac(j) EQ panel_D[1]) then AC_subpanel(j) = 2
-;        if (vol_id_tot_ac(j) EQ panel_D[2]) then AC_subpanel(j) = 1
-;     endif
-;     if ((vol_id_tot_ac(j) GE panel_F[0]) AND (vol_id_tot_ac(j) LE panel_F[2])) then begin
-;        AC_panel(j) = 'F'
-;        if (vol_id_tot_ac(j) EQ panel_F[0]) then AC_subpanel(j) = 1
-;        if (vol_id_tot_ac(j) EQ panel_F[1]) then AC_subpanel(j) = 2
-;        if (vol_id_tot_ac(j) EQ panel_F[2]) then AC_subpanel(j) = 3
-;     endif
-;     if ((vol_id_tot_ac(j) GE panel_B[0]) AND (vol_id_tot_ac(j) LE panel_B[2])) then begin
-;        AC_panel(j) = 'B'
-;        if (vol_id_tot_ac(j) EQ panel_B[0]) then AC_subpanel(j) = 1
-;        if (vol_id_tot_ac(j) EQ panel_B[1]) then AC_subpanel(j) = 2
-;        if (vol_id_tot_ac(j) EQ panel_B[2]) then AC_subpanel(j) = 3
-;     endif
-;     if (vol_id_tot_ac(j) EQ panel_top) then begin
-;        AC_panel(j) = 'T'
-;        AC_subpanel(j) = 0
-;     endif
-;    endfor
-;    
-;    CREATE_STRUCT, acInput, 'input_ac_dhsim', ['EVT_ID', 'AC_PANEL', 'AC_SUBPANEL', 'E_DEP'], $
-;    'I,A,I,F20.15', DIMEN = n_elements(event_id_tot_ac)
-;    acInput.EVT_ID = event_id_tot_ac
-;    acInput.AC_PANEL = AC_panel
-;    acInput.AC_SUBPANEL = AC_subpanel
-;    acInput.E_DEP = energy_dep_tot_ac
-;    
-;    
-;    hdr_acInput = ['COMMENT  AGILE V2.0 Geant4 simulation', $
-;                   'N_in     = '+strtrim(string(N_in),1), $
-;                   'Energy     = '+ene_type, $
-;                   'Theta     = '+strtrim(string(theta_type),1), $
-;                   'Phi     = '+strtrim(string(phi_type),1), $
-;                   'Energy unit = GeV']
-;    
-;    MWRFITS, acInput, outdir+'/G4.AC.AGILE'+agile_version+'.'+py_name+'.'+sim_name+'.'+stripname+'.'+sname+'.'+strmid(strtrim(string(N_in),1),0,10)+'ph.'+ene_type+'MeV.'+strmid(strtrim(string(theta_type),1),0,10)+'.'+strmid(strtrim(string(phi_type),1),0,10)+'.'+strtrim(string(ifile),1)+'.fits', hdr_acInput, /create
+    N_trig_ac = 0l
+    
+    event_id_tot_ac = -1l
+    vol_id_tot_ac = -1l
+    moth_id_tot_ac = -1l
+    energy_dep_tot_ac = -1.
+    
+    j=0l
+    while (1) do begin
+        where_event_eq = where(event_id_ac EQ event_id_ac(j))
+        
+        N_trig_ac = N_trig_ac + 1
+        
+        vol_id_temp_ac = vol_id_ac(where_event_eq) 
+        moth_id_temp_ac = moth_id_ac(where_event_eq) 
+        energy_dep_temp_ac = energy_dep_ac(where_event_eq) 
+            
+        r = 0l
+        while(1) do begin
+           where_vol_eq = where(vol_id_temp_ac EQ vol_id_temp_ac(r), complement = where_other_vol)
+           event_id_tot_ac = [event_id_tot_ac, event_id_ac(j)]
+           vol_id_tot_ac = [vol_id_tot_ac, vol_id_temp_ac(r)]
+           moth_id_tot_ac = [moth_id_tot_ac, moth_id_temp_ac(r)]
+           energy_dep_tot_ac = [energy_dep_tot_ac, total(energy_dep_temp_ac(where_vol_eq))]
+           if (where_other_vol(0) NE -1) then begin
+             vol_id_temp_ac = vol_id_temp_ac(where_other_vol)
+             moth_id_temp_ac = moth_id_temp_ac(where_other_vol)
+             energy_dep_temp_ac = energy_dep_temp_ac(where_other_vol)
+           endif else break
+        endwhile
+            
+        N_event_eq = n_elements(where_event_eq)
+        if where_event_eq(N_event_eq-1) LT (n_elements(event_id_ac)-1) then begin
+          j = where_event_eq(N_event_eq-1)+1
+        endif else break
+    endwhile
+    
+    
+    if (n_elements(event_id_tot_ac) GT 1) then begin
+      event_id_tot_ac = event_id_tot_ac[1:*]
+      vol_id_tot_ac = vol_id_tot_ac[1:*]
+      moth_id_tot_ac = moth_id_tot_ac[1:*]
+      energy_dep_tot_ac = energy_dep_tot_ac[1:*]
+    endif
+    
+    ; AC panel IDs
+    
+    AC_panel = strarr(n_elements(vol_id_tot_ac))
+    AC_subpanel = intarr(n_elements(vol_id_tot_ac))
+    
+    
+    for j=0l, n_elements(vol_id_tot_ac)-1 do begin
+     if ((vol_id_tot_ac(j) GE panel_S[0]) AND (vol_id_tot_ac(j) LE panel_S[2])) then begin
+        AC_panel(j) = 'S'
+        if (vol_id_tot_ac(j) EQ panel_S[0]) then AC_subpanel(j) = 3
+        if (vol_id_tot_ac(j) EQ panel_S[1]) then AC_subpanel(j) = 2
+        if (vol_id_tot_ac(j) EQ panel_S[2]) then AC_subpanel(j) = 1
+     endif
+     if ((vol_id_tot_ac(j) GE panel_D[0]) AND (vol_id_tot_ac(j) LE panel_D[2])) then begin
+        AC_panel(j) = 'D'
+        if (vol_id_tot_ac(j) EQ panel_D[0]) then AC_subpanel(j) = 3
+        if (vol_id_tot_ac(j) EQ panel_D[1]) then AC_subpanel(j) = 2
+        if (vol_id_tot_ac(j) EQ panel_D[2]) then AC_subpanel(j) = 1
+     endif
+     if ((vol_id_tot_ac(j) GE panel_F[0]) AND (vol_id_tot_ac(j) LE panel_F[2])) then begin
+        AC_panel(j) = 'F'
+        if (vol_id_tot_ac(j) EQ panel_F[0]) then AC_subpanel(j) = 1
+        if (vol_id_tot_ac(j) EQ panel_F[1]) then AC_subpanel(j) = 2
+        if (vol_id_tot_ac(j) EQ panel_F[2]) then AC_subpanel(j) = 3
+     endif
+     if ((vol_id_tot_ac(j) GE panel_B[0]) AND (vol_id_tot_ac(j) LE panel_B[2])) then begin
+        AC_panel(j) = 'B'
+        if (vol_id_tot_ac(j) EQ panel_B[0]) then AC_subpanel(j) = 1
+        if (vol_id_tot_ac(j) EQ panel_B[1]) then AC_subpanel(j) = 2
+        if (vol_id_tot_ac(j) EQ panel_B[2]) then AC_subpanel(j) = 3
+     endif
+     if (vol_id_tot_ac(j) EQ panel_top) then begin
+        AC_panel(j) = 'T'
+        AC_subpanel(j) = 0
+     endif
+    endfor
+    
+    CREATE_STRUCT, acInput, 'input_ac_dhsim', ['EVT_ID', 'AC_PANEL', 'AC_SUBPANEL', 'E_DEP'], $
+    'I,A,I,F20.15', DIMEN = n_elements(event_id_tot_ac)
+    acInput.EVT_ID = event_id_tot_ac
+    acInput.AC_PANEL = AC_panel
+    acInput.AC_SUBPANEL = AC_subpanel
+    acInput.E_DEP = energy_dep_tot_ac
+    
+    
+    hdr_acInput = ['COMMENT  ASTROGAM '+astrogam_version+' Geant4 simulation', $
+                   'N_in     = '+strtrim(string(N_in),1), $
+                   'Energy     = '+ene_type, $
+                   'Theta     = '+strtrim(string(theta_type),1), $
+                   'Phi     = '+strtrim(string(phi_type),1), $
+                   'Energy unit = GeV']
+    
+    MWRFITS, acInput, outdir+'/G4.AC.ASTROGAM'+astrogam_version+'.'+py_name+'.'+sim_name+'.'+stripname+'.'+sname+'.'+strmid(strtrim(string(N_in),1),0,10)+part_type+'.'+ene_type+'MeV.'+strmid(strtrim(string(theta_type),1),0,10)+'.'+strmid(strtrim(string(phi_type),1),0,10)+'.'+strtrim(string(ifile),1)+'.fits', hdr_acInput, /create
 ;    
 ;    openw,lun,outdir+'/G4_GAMS_AC_AGILE'+agile_version+'_'+py_name+'_'+sim_name+'_'+stripname+'_'+sname+'_'+strmid(strtrim(string(N_in),1),0,10)+'ph_'+ene_type+'MeV_'+strmid(strtrim(string(theta_type),1),0,10)+'_'+strmid(strtrim(string(phi_type),1),0,10)+'.'+strtrim(string(ifile),1)+'.dat',/get_lun
 ;    ; ASCII Columns:
@@ -2423,14 +2453,6 @@ if (astrogam_version EQ 'V3.0') then begin
 ;
 ;    
 ;    gams_AC_panel = AC_panel
-;    ;gams_AC_panel = strarr(n_elements(AC_panel))
-;    ;for jac=0, n_elements(event_id_tot)-1 do begin
-;    ;    if (AC_panel(jac) EQ 'S') then gams_AC_panel(jac) = 'B'
-;    ;    if (AC_panel(jac) EQ 'F') then gams_AC_panel(jac) = 'S'
-;    ;    if (AC_panel(jac) EQ 'D') then gams_AC_panel(jac) = 'F'
-;    ;    if (AC_panel(jac) EQ 'B') then gams_AC_panel(jac) = 'D'    
-;    ;    if (AC_panel(jac) EQ 'T') then gams_AC_panel(jac) = 'T'    
-;    ;endfor
 ;    
 ;    j=0l
 ;    while (1) do begin
@@ -2442,6 +2464,6 @@ if (astrogam_version EQ 'V3.0') then begin
 ;    endwhile
 ;    
 ;    Free_lun, lun
-    
+     endif
     endfor
 end
